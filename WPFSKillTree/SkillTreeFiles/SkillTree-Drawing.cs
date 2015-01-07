@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
@@ -20,43 +19,43 @@ namespace POESKillTree.SkillTreeFiles
         public Dictionary<bool, KeyValuePair<Rect, ImageBrush>> StartBackgrounds =
             new Dictionary<bool, KeyValuePair<Rect, ImageBrush>>();
 
-        public DrawingVisual picActiveLinks;
-        public DrawingVisual picBackground;
-        public DrawingVisual picFaces;
-        public DrawingVisual picHighlights;
-        public DrawingVisual picLinks;
-        public DrawingVisual picPathOverlay;
-        public DrawingVisual picSkillBaseSurround;
-        public DrawingVisual picSkillIconLayer;
-        public DrawingVisual picActiveSkillIconLayer;
-        public DrawingVisual picSkillSurround;
+        public DrawingVisual PicActiveLinks;
+        public DrawingVisual PicBackground;
+        public DrawingVisual PicFaces;
+        public DrawingVisual PicHighlights;
+        public DrawingVisual PicLinks;
+        public DrawingVisual PicPathOverlay;
+        public DrawingVisual PicSkillBaseSurround;
+        public DrawingVisual PicSkillIconLayer;
+        public DrawingVisual PicActiveSkillIconLayer;
+        public DrawingVisual PicSkillSurround;
 
         public void CreateCombineVisual()
         {
             SkillTreeVisual = new DrawingVisual();
-            SkillTreeVisual.Children.Add(picBackground);
-            SkillTreeVisual.Children.Add(picLinks);
-            SkillTreeVisual.Children.Add(picActiveLinks);
-            SkillTreeVisual.Children.Add(picPathOverlay);
-            SkillTreeVisual.Children.Add(picSkillIconLayer);
-            SkillTreeVisual.Children.Add(picActiveSkillIconLayer);
-            SkillTreeVisual.Children.Add(picSkillBaseSurround);
-            SkillTreeVisual.Children.Add(picSkillSurround);
-            SkillTreeVisual.Children.Add(picFaces);
-            SkillTreeVisual.Children.Add(picHighlights);
+            SkillTreeVisual.Children.Add(PicBackground);
+            SkillTreeVisual.Children.Add(PicLinks);
+            SkillTreeVisual.Children.Add(PicActiveLinks);
+            SkillTreeVisual.Children.Add(PicPathOverlay);
+            SkillTreeVisual.Children.Add(PicSkillIconLayer);
+            SkillTreeVisual.Children.Add(PicActiveSkillIconLayer);
+            SkillTreeVisual.Children.Add(PicSkillBaseSurround);
+            SkillTreeVisual.Children.Add(PicSkillSurround);
+            SkillTreeVisual.Children.Add(PicFaces);
+            SkillTreeVisual.Children.Add(PicHighlights);
         }
 
         #endregion
 
         public void ClearPath()
         {
-            picPathOverlay.RenderOpen().Close();
+            PicPathOverlay.RenderOpen().Close();
         }
 
         private void DrawBackgroundLayer()
         {
-            picBackground = new DrawingVisual();
-            using (var drawingContext = picBackground.RenderOpen())
+            PicBackground = new DrawingVisual();
+            using (var drawingContext = PicBackground.RenderOpen())
             {
                 BitmapImage[] iscr =
                 {
@@ -68,11 +67,10 @@ namespace POESKillTree.SkillTreeFiles
                 orbitBrush[0] = new ImageBrush(_assets["PSGroupBackground1"].PImage);
                 orbitBrush[1] = new ImageBrush(_assets["PSGroupBackground2"].PImage);
                 orbitBrush[2] = new ImageBrush(_assets["PSGroupBackground3"].PImage);
-                (orbitBrush[2] as ImageBrush).TileMode = TileMode.FlipXY;
-                (orbitBrush[2] as ImageBrush).Viewport = new Rect(0, 0, 1, .5f);
+                ((ImageBrush) orbitBrush[2]).TileMode = TileMode.FlipXY;
+                ((ImageBrush) orbitBrush[2]).Viewport = new Rect(0, 0, 1, .5f);
 
-                var backgroundBrush = new ImageBrush(_assets["Background1"].PImage);
-                backgroundBrush.TileMode = TileMode.Tile;
+                var backgroundBrush = new ImageBrush(_assets["Background1"].PImage) {TileMode = TileMode.Tile};
                 backgroundBrush.Viewport = new Rect(0, 0, 
                     6 * backgroundBrush.ImageSource.Width / TRect.Width, 
                     6 * backgroundBrush.ImageSource.Height / TRect.Width);
@@ -157,7 +155,7 @@ namespace POESKillTree.SkillTreeFiles
 
         public void DrawFaces()
         {
-            using (DrawingContext dc = picFaces.RenderOpen())
+            using (DrawingContext dc = PicFaces.RenderOpen())
             {
                 for (int i = 0; i < CharName.Count; i++)
                 {
@@ -175,13 +173,13 @@ namespace POESKillTree.SkillTreeFiles
 
                         var charBaseAttr = CharBaseAttributes[Chartype];
 
-                        var text = CreateAttributeText(charBaseAttr["+# to Intelligence"].ToString(), Brushes.DodgerBlue);
+                        var text = CreateAttributeText(charBaseAttr["+# to Intelligence"].ToString(CultureInfo.InvariantCulture), Brushes.DodgerBlue);
                         dc.DrawText(text, pos - new Vector2D(19, 117));
 
-                        text = CreateAttributeText(charBaseAttr["+# to Strength"].ToString(), Brushes.IndianRed);
+                        text = CreateAttributeText(charBaseAttr["+# to Strength"].ToString(CultureInfo.InvariantCulture), Brushes.IndianRed);
                         dc.DrawText(text, pos - new Vector2D(102, -32));
 
-                        text = CreateAttributeText(charBaseAttr["+# to Dexterity"].ToString(), Brushes.MediumSeaGreen);
+                        text = CreateAttributeText(charBaseAttr["+# to Dexterity"].ToString(CultureInfo.InvariantCulture), Brushes.MediumSeaGreen);
                         dc.DrawText(text, pos - new Vector2D(-69, -32));
 
                     }
@@ -202,7 +200,7 @@ namespace POESKillTree.SkillTreeFiles
         public void DrawHighlights(List<SkillNode> nodes, SolidColorBrush brush = null)
         {
             var hpen = new Pen(brush ?? Brushes.Aqua, 20);
-            using (DrawingContext dc = picHighlights.RenderOpen())
+            using (DrawingContext dc = PicHighlights.RenderOpen())
             {
                 foreach (SkillNode node in nodes)
                 {
@@ -213,9 +211,9 @@ namespace POESKillTree.SkillTreeFiles
 
         private void DrawLinkBackgroundLayer(List<ushort[]> links)
         {
-            picLinks = new DrawingVisual();
+            PicLinks = new DrawingVisual();
             var pen2 = new Pen(Brushes.DarkSlateGray, 20f);
-            using (DrawingContext dc = picLinks.RenderOpen())
+            using (DrawingContext dc = PicLinks.RenderOpen())
             {
                 foreach (var nid in links)
                 {
@@ -247,7 +245,7 @@ namespace POESKillTree.SkillTreeFiles
 
         private void DrawNodeBaseSurround()
         {
-            using (DrawingContext dc = picSkillBaseSurround.RenderOpen())
+            using (DrawingContext dc = PicSkillBaseSurround.RenderOpen())
             {
                 foreach (ushort skillNode in Skillnodes.Keys)
                 {
@@ -285,7 +283,7 @@ namespace POESKillTree.SkillTreeFiles
 
         private void DrawNodeSurround()
         {
-            using (DrawingContext dc = picSkillSurround.RenderOpen())
+            using (DrawingContext dc = PicSkillSurround.RenderOpen())
             {
                 foreach (ushort skillNode in SkilledNodes)
                 {
@@ -323,10 +321,9 @@ namespace POESKillTree.SkillTreeFiles
 
         public void DrawPath(List<ushort> path)
         {
-            var pen2 = new Pen(Brushes.LawnGreen, 15f);
-            pen2.DashStyle = new DashStyle(new DoubleCollection { 2 }, 2);
+            var pen2 = new Pen(Brushes.LawnGreen, 15f) {DashStyle = new DashStyle(new DoubleCollection {2}, 2)};
 
-            using (DrawingContext dc = picPathOverlay.RenderOpen())
+            using (DrawingContext dc = PicPathOverlay.RenderOpen())
             {
                 for (int i = -1; i < path.Count - 1; i++)
                 {
@@ -342,10 +339,9 @@ namespace POESKillTree.SkillTreeFiles
 
         public void DrawRefundPreview(HashSet<ushort> nodes)
         {
-            var pen2 = new Pen(Brushes.Red, 15f);
-            pen2.DashStyle = new DashStyle(new DoubleCollection { 2 }, 2);
+            var pen2 = new Pen(Brushes.Red, 15f) {DashStyle = new DashStyle(new DoubleCollection {2}, 2)};
 
-            using (DrawingContext dc = picPathOverlay.RenderOpen())
+            using (DrawingContext dc = PicPathOverlay.RenderOpen())
             {
                 foreach (ushort node in nodes)
                 {
@@ -360,17 +356,16 @@ namespace POESKillTree.SkillTreeFiles
 
         private void InitSkillIconLayers()
         {
-            picActiveSkillIconLayer = new DrawingVisual();
-            picSkillIconLayer = new DrawingVisual();
+            PicActiveSkillIconLayer = new DrawingVisual();
+            PicSkillIconLayer = new DrawingVisual();
         }
 
         private void DrawSkillIconLayer()
         {
             var pen = new Pen(Brushes.Black, 5);
-            var pen3 = new Pen(Brushes.Green, 10);
-
+            
             Geometry g = new RectangleGeometry(TRect);
-            using (DrawingContext dc = picSkillIconLayer.RenderOpen())
+            using (DrawingContext dc = PicSkillIconLayer.RenderOpen())
             {
                 dc.DrawGeometry(null, pen, g);
                 foreach (var skillNode in Skillnodes)
@@ -394,10 +389,9 @@ namespace POESKillTree.SkillTreeFiles
         private void DrawActiveNodeIcons()
         {
             var pen = new Pen(Brushes.Black, 5);
-            var pen3 = new Pen(Brushes.Green, 10);
-
+           
             Geometry g = new RectangleGeometry(TRect);
-            using (DrawingContext dc = picActiveSkillIconLayer.RenderOpen())
+            using (DrawingContext dc = PicActiveSkillIconLayer.RenderOpen())
             {
                 dc.DrawGeometry(null, pen, g);
                 foreach (var skillNode in SkilledNodes)
@@ -431,65 +425,58 @@ namespace POESKillTree.SkillTreeFiles
             StartBackgrounds.Add(false,
                 (new KeyValuePair<Rect, ImageBrush>(new Rect(0, 0, bi2.PixelWidth, bi2.PixelHeight),
                     new ImageBrush(bi2))));
-            picFaces = new DrawingVisual();
+            PicFaces = new DrawingVisual();
         }
 
         private void InitNodeSurround()
         {
-            picSkillSurround = new DrawingVisual();
-            picSkillBaseSurround = new DrawingVisual();
-            Size sizeNot;
-            var brNot = new ImageBrush();
-            brNot.Stretch = Stretch.Uniform;
-            BitmapImage PImageNot = _assets[NodeBackgrounds["notable"]].PImage;
-            brNot.ImageSource = PImageNot;
-            sizeNot = new Size(PImageNot.PixelWidth, PImageNot.PixelHeight);
+            PicSkillSurround = new DrawingVisual();
+            PicSkillBaseSurround = new DrawingVisual();
+            var brNot = new ImageBrush {Stretch = Stretch.Uniform};
+            BitmapImage pImageNot = _assets[NodeBackgrounds["notable"]].PImage;
+            brNot.ImageSource = pImageNot;
+            var sizeNot = new Size(pImageNot.PixelWidth, pImageNot.PixelHeight);
 
 
-            var brKS = new ImageBrush();
-            brKS.Stretch = Stretch.Uniform;
-            BitmapImage PImageKr = _assets[NodeBackgrounds["keystone"]].PImage;
-            brKS.ImageSource = PImageKr;
-            Size sizeKs = new Size(PImageKr.PixelWidth, PImageKr.PixelHeight);
+            var brKs = new ImageBrush {Stretch = Stretch.Uniform};
+            BitmapImage pImageKr = _assets[NodeBackgrounds["keystone"]].PImage;
+            brKs.ImageSource = pImageKr;
+            Size sizeKs = new Size(pImageKr.PixelWidth, pImageKr.PixelHeight);
 
-            var brNotH = new ImageBrush();
-            brNotH.Stretch = Stretch.Uniform;
-            BitmapImage PImageNotH = _assets[NodeBackgroundsActive["notable"]].PImage;
-            brNotH.ImageSource = PImageNotH;
-            Size sizeNotH = new Size(PImageNotH.PixelWidth, PImageNotH.PixelHeight);
+            var brNotH = new ImageBrush {Stretch = Stretch.Uniform};
+            BitmapImage pImageNotH = _assets[NodeBackgroundsActive["notable"]].PImage;
+            brNotH.ImageSource = pImageNotH;
+            Size sizeNotH = new Size(pImageNotH.PixelWidth, pImageNotH.PixelHeight);
 
 
-            var brKSH = new ImageBrush();
-            brKSH.Stretch = Stretch.Uniform;
-            BitmapImage PImageKrH = _assets[NodeBackgroundsActive["keystone"]].PImage;
-            brKSH.ImageSource = PImageKrH;
-            Size sizeKsH = new Size(PImageKrH.PixelWidth, PImageKrH.PixelHeight);
+            var brKsh = new ImageBrush {Stretch = Stretch.Uniform};
+            BitmapImage pImageKrH = _assets[NodeBackgroundsActive["keystone"]].PImage;
+            brKsh.ImageSource = pImageKrH;
+            Size sizeKsH = new Size(pImageKrH.PixelWidth, pImageKrH.PixelHeight);
 
-            var brNorm = new ImageBrush();
-            brNorm.Stretch = Stretch.Uniform;
-            BitmapImage PImageNorm = _assets[NodeBackgrounds["normal"]].PImage;
-            brNorm.ImageSource = PImageNorm;
-            Size isizeNorm = new Size(PImageNorm.PixelWidth, PImageNorm.PixelHeight);
+            var brNorm = new ImageBrush {Stretch = Stretch.Uniform};
+            BitmapImage pImageNorm = _assets[NodeBackgrounds["normal"]].PImage;
+            brNorm.ImageSource = pImageNorm;
+            Size isizeNorm = new Size(pImageNorm.PixelWidth, pImageNorm.PixelHeight);
 
-            var brNormA = new ImageBrush();
-            brNormA.Stretch = Stretch.Uniform;
-            BitmapImage PImageNormA = _assets[NodeBackgroundsActive["normal"]].PImage;
-            brNormA.ImageSource = PImageNormA;
-            Size isizeNormA = new Size(PImageNormA.PixelWidth, PImageNormA.PixelHeight);
+            var brNormA = new ImageBrush {Stretch = Stretch.Uniform};
+            BitmapImage pImageNormA = _assets[NodeBackgroundsActive["normal"]].PImage;
+            brNormA.ImageSource = pImageNormA;
+            Size isizeNormA = new Size(pImageNormA.PixelWidth, pImageNormA.PixelHeight);
 
             NodeSurroundBrush.Add(new KeyValuePair<Size, ImageBrush>(isizeNorm, brNorm));
             NodeSurroundBrush.Add(new KeyValuePair<Size, ImageBrush>(isizeNormA, brNormA));
-            NodeSurroundBrush.Add(new KeyValuePair<Size, ImageBrush>(sizeKs, brKS));
+            NodeSurroundBrush.Add(new KeyValuePair<Size, ImageBrush>(sizeKs, brKs));
             NodeSurroundBrush.Add(new KeyValuePair<Size, ImageBrush>(sizeNot, brNot));
-            NodeSurroundBrush.Add(new KeyValuePair<Size, ImageBrush>(sizeKsH, brKSH));
+            NodeSurroundBrush.Add(new KeyValuePair<Size, ImageBrush>(sizeKsH, brKsh));
             NodeSurroundBrush.Add(new KeyValuePair<Size, ImageBrush>(sizeNotH, brNotH));
         }
 
         private void InitOtherDynamicLayers()
         {
-            picActiveLinks = new DrawingVisual();
-            picPathOverlay = new DrawingVisual();
-            picHighlights = new DrawingVisual();
+            PicActiveLinks = new DrawingVisual();
+            PicPathOverlay = new DrawingVisual();
+            PicHighlights = new DrawingVisual();
         }
     }
 }

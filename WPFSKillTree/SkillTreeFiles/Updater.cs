@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Text;
 using Raven.Json.Linq;
@@ -16,37 +14,37 @@ namespace POESKillTree.SkillTreeFiles
     public class Updater
     {
         // Git API URL to fetch releases (the first one is latest one).
-        private static readonly string GitAPILatestReleaseURL = "https://api.github.com/repos/EmmittJ/PoESkillTree/releases";
+        private const string GitApiLatestReleaseUrl = "https://api.github.com/repos/EmmittJ/PoESkillTree/releases";
         // The flag whether check for updates was done and was successful.
-        public static bool IsChecked = false;
+        public static bool IsChecked;
         // The flag whether download is complete.
-        public static bool IsDownloaded { get { return Latest != null && Latest.IsDownloaded; } }
+        public static bool IsDownloaded { get { return _latest != null && _latest.IsDownloaded; } }
         // The flag whether download is in progress.
-        public static bool IsDownloading { get { return Latest != null && Latest.IsDownloading; } }
+        public static bool IsDownloading { get { return _latest != null && _latest.IsDownloading; } }
         // The flag whether installation completed.
-        public static bool IsInstalled = false;
+        public static bool IsInstalled;
         // Latest release.
-        private static Release Latest;
+        private static Release _latest;
         // HTTP request timeout for release checks and downloads (in seconds).
-        private const int REQUEST_TIMEOUT = 15;
+        private const int RequestTimeout = 15;
         // Work directory of update process (relative to installation root).
-        private static readonly string WorkDir = ".update";
+        private const string WorkDir = ".update";
 
         // Release informations.
         public class Release
         {
             // The web client instance of current download process.
-            private WebClient Client;
+            private WebClient _client;
             // The name.
             public string Name;
             // The description.
             public string Description;
             // The flag whether release was downloaded.
-            public bool IsDownloaded { get { return Client == null && TemporaryFile != null; } }
+            public bool IsDownloaded { get { return _client == null && _temporaryFile != null; } }
             // The flag whether download is still in progress.
-            public bool IsDownloading { get { return Client != null; } }
+            public bool IsDownloading { get { return _client != null; } }
             // The temporary file for package download.
-            private string TemporaryFile;
+            private string _temporaryFile;
             // The URI of release package.
             public Uri URI;
             // The version string.
@@ -65,27 +63,27 @@ namespace POESKillTree.SkillTreeFiles
             public void Cancel()
             {
                 // Cancel download in progress.
-                if (Client.IsBusy)
-                    Client.CancelAsync();
+                if (_client.IsBusy)
+                    _client.CancelAsync();
             }
 
             // Dispose of all resources.
             public void Dispose()
             {
                 // Dispose web client.
-                if (Client != null)
+                if (_client != null)
                 {
-                    Client.Dispose();
-                    Client = null;
+                    _client.Dispose();
+                    _client = null;
                 }
 
                 // Delete temporary file.
-                if (TemporaryFile != null)
+                if (_temporaryFile != null)
                 {
                     try
                     {
-                        File.Delete(TemporaryFile);
-                        TemporaryFile = null;
+                        File.Delete(_temporaryFile);
+                        _temporaryFile = null;
                     }
                     catch (Exception e) { }
                 }
@@ -106,26 +104,26 @@ namespace POESKillTree.SkillTreeFiles
              */
             public void Download(AsyncCompletedEventHandler completedHandler, DownloadProgressChangedEventHandler progressHandler)
             {
-                if (Client != null)
+                if (_client != null)
                     throw new UpdaterException("Download already in progress");
-                if (TemporaryFile != null)
+                if (_temporaryFile != null)
                     throw new UpdaterException("Download already completed");
 
                 try
                 {
                     // Initialize web client.
-                    Client = new UpdaterWebClient();
-                    Client.DownloadFileCompleted += new AsyncCompletedEventHandler(DownloadCompleted);
+                    _client = new UpdaterWebClient();
+                    _client.DownloadFileCompleted += DownloadCompleted;
                     if (completedHandler != null)
-                        Client.DownloadFileCompleted += new AsyncCompletedEventHandler(completedHandler);
+                        _client.DownloadFileCompleted += completedHandler;
                     if (progressHandler != null)
-                        Client.DownloadProgressChanged += new DownloadProgressChangedEventHandler(progressHandler);
+                        _client.DownloadProgressChanged += progressHandler;
 
                     // Create temporary file.
-                    TemporaryFile = Path.GetTempFileName();
+                    _temporaryFile = Path.GetTempFileName();
 
                     // Start download.
-                    Client.DownloadFileAsync(URI, TemporaryFile);
+                    _client.DownloadFileAsync(URI, _temporaryFile);
                 }
                 catch (Exception e)
                 {
@@ -138,8 +136,8 @@ namespace POESKillTree.SkillTreeFiles
             private void DownloadCompleted(Object sender, AsyncCompletedEventArgs e)
             {
                 // Dispose web client.
-                Client.Dispose();
-                Client = null;
+                _client.Dispose();
+                _client = null;
 
                 // Dispose of resources so download can be retried.
                 if (e.Cancelled || e.Error != null) Dispose();
@@ -159,10 +157,10 @@ namespace POESKillTree.SkillTreeFiles
              */
             public void Install()
             {
-                if (Client != null)
+                if (_client != null)
                     throw new UpdaterException("Download still in progress");
 
-                if (TemporaryFile == null)
+                if (_temporaryFile == null)
                     throw new UpdaterException("No package downloaded");
 
                 try
@@ -171,7 +169,7 @@ namespace POESKillTree.SkillTreeFiles
                     Directory.CreateDirectory(WorkDir);
 
                     // Extract package.
-                    ZipFile zip = ZipFile.Read(TemporaryFile);
+                    ZipFile zip = ZipFile.Read(_temporaryFile);
                     zip.ExtractAll(WorkDir);
 
                     // Copy content of first directory found in work directory to installation root.
@@ -197,12 +195,13 @@ namespace POESKillTree.SkillTreeFiles
             {
                 WebRequest request = base.GetWebRequest(address);
 
-                if (request is HttpWebRequest)
+                var webRequest = request as HttpWebRequest;
+                if (webRequest != null)
                 {
-                    HttpWebRequest httpRequest = (HttpWebRequest)request;
+                    HttpWebRequest httpRequest = webRequest;
                     httpRequest.UserAgent = "PoESkillTree";
                     httpRequest.KeepAlive = false;
-                    httpRequest.Timeout = REQUEST_TIMEOUT * 1000;
+                    httpRequest.Timeout = RequestTimeout * 1000;
                 }
 
                 return request;
@@ -212,8 +211,8 @@ namespace POESKillTree.SkillTreeFiles
         // Cancels download.
         public static void Cancel()
         {
-            if (Latest != null && Latest.IsDownloading)
-                Latest.Cancel();
+            if (_latest != null && _latest.IsDownloading)
+                _latest.Cancel();
         }
 
         /* Checks for updates and returns release informations when there is newer one.
@@ -223,21 +222,20 @@ namespace POESKillTree.SkillTreeFiles
          */
         public static Release CheckForUpdates()
         {
-            if (Latest != null)
+            if (_latest != null)
             {
-                if (Latest.IsDownloading)
+                if (_latest.IsDownloading)
                     throw new UpdaterException("Download already in progress");
-                Latest.Dispose();
+                _latest.Dispose();
             }
-            Latest = null;
+            _latest = null;
             IsChecked = IsInstalled = false;
 
-            var webClient = new UpdaterWebClient();
-            webClient.Encoding = Encoding.UTF8;
+            var webClient = new UpdaterWebClient {Encoding = Encoding.UTF8};
 
             try
             {
-                string json = webClient.DownloadString(GitAPILatestReleaseURL);
+                string json = webClient.DownloadString(GitApiLatestReleaseUrl);
 
                 RavenJArray releases = RavenJArray.Parse(json);
                 if (releases.Length < 1)
@@ -260,7 +258,7 @@ namespace POESKillTree.SkillTreeFiles
                 string url = ((RavenJObject)assets[0])["browser_download_url"].Value<string>();
 
                 IsChecked = true;
-                Latest = new Release
+                _latest = new Release
                 {
                     Name = latest["name"].Value<string>(),
                     Description = latest["body"].Value<string>(),
@@ -280,7 +278,7 @@ namespace POESKillTree.SkillTreeFiles
                 throw new UpdaterException(e.Message, e);
             }
 
-            return Latest;
+            return _latest;
         }
 
         // Copies files or directories to target directory recursively.
@@ -317,12 +315,12 @@ namespace POESKillTree.SkillTreeFiles
         // Dispose of current update process.
         public static void Dispose()
         {
-            if (Latest != null)
+            if (_latest != null)
             {
-                if (Latest.IsDownloading)
+                if (_latest.IsDownloading)
                     throw new UpdaterException("Download still in progress");
-                Latest.Dispose();
-                Latest = null;
+                _latest.Dispose();
+                _latest = null;
             }
 
             IsChecked = IsInstalled = false;
@@ -333,12 +331,12 @@ namespace POESKillTree.SkillTreeFiles
          */
         public static void Download(AsyncCompletedEventHandler completedHandler = null, DownloadProgressChangedEventHandler progressHandler = null)
         {
-            if (Latest != null)
+            if (_latest != null)
             {
-                if (Latest.IsDownloaded || Latest.IsDownloading)
+                if (_latest.IsDownloaded || _latest.IsDownloading)
                     throw new UpdaterException("Download completed or still in progress");
 
-                Latest.Download(completedHandler, progressHandler);
+                _latest.Download(completedHandler, progressHandler);
             }
         }
 
@@ -351,7 +349,7 @@ namespace POESKillTree.SkillTreeFiles
         // Return latest release, or null if there is none or it wasn't checked for yet.
         public static Release GetLatestRelease()
         {
-            return Latest;
+            return _latest;
         }
 
         /* Installs downloaded release.
@@ -359,16 +357,16 @@ namespace POESKillTree.SkillTreeFiles
          */
         public static void Install()
         {
-            if (Latest != null)
+            if (_latest != null)
             {
-                if (Latest.IsDownloading)
+                if (_latest.IsDownloading)
                     throw new UpdaterException("Download still in progress");
-                if (!Latest.IsDownloaded)
+                if (!_latest.IsDownloaded)
                     throw new UpdaterException("No package downloaded");
 
                 // If installation fails (exception will be thrown), latest release will be in ready to re-download state.
-                Latest.Install();
-                Latest = null;
+                _latest.Install();
+                _latest = null;
                 IsInstalled = true;
             }
         }

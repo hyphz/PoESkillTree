@@ -2,12 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Serialization;
 using POESKillTree.Model;
-using POESKillTree.ViewModels;
 using POESKillTree.ViewModels.ItemAttribute;
 using AttackSkill = POESKillTree.SkillTreeFiles.Compute.AttackSkill;
 using DamageForm = POESKillTree.SkillTreeFiles.Compute.DamageForm;
@@ -36,7 +34,7 @@ namespace POESKillTree.SkillTreeFiles
             public string Name;
             // Deserialized flag indicating whether attribute should not be updated.
             [XmlAttribute]
-            public bool NoUpdate = false;
+            public bool NoUpdate;
             [XmlIgnore]
             public bool NoUpdateSpecified { get { return NoUpdate; } }
             // Deserialized values.
@@ -95,7 +93,7 @@ namespace POESKillTree.SkillTreeFiles
 
                 // Get quality-based table values and perform redundancy checks.
                 tableValues = Values.FindAll(v => v is ValueAt && ((ValueAt)v).QualitySpecified).Cast<ValueAt>().ToList();
-                bool qualityTableIsFull = false;
+                bool qualityTableIsFull;
                 if (tableValues.Count > 0)
                 {
                     float[] dummy = new float[] { 1 };
@@ -134,7 +132,7 @@ namespace POESKillTree.SkillTreeFiles
                 }
 
                 List<ValueForQualityRange> qualityRangeValues = Values.FindAll(v => v is ValueForQualityRange).Cast<ValueForQualityRange>().ToList();
-                bool qualityRangesIsFull = false;
+                bool qualityRangesIsFull;
                 if (qualityRangeValues.Count > 0)
                 {
                     float[] dummy = new float[] { 1 };
@@ -953,10 +951,7 @@ namespace POESKillTree.SkillTreeFiles
 
             public static float[] Parse(string text)
             {
-                List<float> value = new List<float>();
-
-                foreach (Match m in ReValue.Matches(text))
-                    value.Add(float.Parse(m.Groups[0].Value, System.Globalization.CultureInfo.InvariantCulture));
+                List<float> value = (from Match m in ReValue.Matches(text) select float.Parse(m.Groups[0].Value, System.Globalization.CultureInfo.InvariantCulture)).ToList();
 
                 return value.Count > 0 ? value.ToArray() : null;
             }

@@ -127,8 +127,7 @@ namespace UpdateDB
                 string url = URL + "/" + PathOf(name);
                 Info("Fetching gem: " + name + " (" + url + ")");
 
-                WebClient webClient = new WebClient();
-                webClient.Encoding = Encoding.UTF8;
+                WebClient webClient = new WebClient {Encoding = Encoding.UTF8};
                 html = webClient.DownloadString(url);
             }
             catch (WebException e)
@@ -141,9 +140,11 @@ namespace UpdateDB
                 return null;
             }
 
-            HtmlDocument doc = new HtmlDocument();
-            doc.OptionReadEncoding = false;
-            doc.OptionDefaultStreamEncoding = Encoding.UTF8;
+            HtmlDocument doc = new HtmlDocument
+                               {
+                                   OptionReadEncoding = false,
+                                   OptionDefaultStreamEncoding = Encoding.UTF8
+                               };
             doc.LoadHtml(html);
 
             // Get correct gem name.
@@ -200,14 +201,7 @@ namespace UpdateDB
                         foreach (HtmlNode cell in row.SelectNodes("td|th"))
                         {
                             HtmlNode abbr = cell.SelectSingleNode("abbr");
-                            if (abbr != null)
-                            {
-                                text = abbr.Attributes["title"].Value;
-                            }
-                            else
-                            {
-                                text = cell.InnerText;
-                            }
+                            text = abbr != null ? abbr.Attributes["title"].Value : cell.InnerText;
 
                             text = System.Net.WebUtility.HtmlDecode(text).Replace(" ", "").ToLowerInvariant();
 
@@ -253,9 +247,7 @@ namespace UpdateDB
                     HtmlNodeCollection textNodes = td.SelectNodes(".//text()");
                     if (textNodes != null)
                     {
-                        List<string> texts = new List<string>();
-                        foreach (HtmlNode node in textNodes)
-                            texts.Add(node.InnerText);
+                        List<string> texts = textNodes.Select(node => node.InnerText).ToList();
 
                         List<Token> tokens = ParseTokens(gemName, texts);
                         foreach (Token token in tokens)
@@ -285,9 +277,7 @@ namespace UpdateDB
             foreach (string text in new List<string>(texts))
             {
                 // Parse values.
-                string value = "";
-                foreach (Match m in ReNumber.Matches(text))
-                    value += " " + m.Groups[0].Value;
+                string value = ReNumber.Matches(text).Cast<Match>().Aggregate("", (current, m) => current + (" " + m.Groups[0].Value));
                 value = value.TrimStart();
 
                 // Replace numbers with 'x'.
@@ -313,9 +303,7 @@ namespace UpdateDB
                 string token = String.Concat(texts);
 
                 // Parse values.
-                string value = "";
-                foreach (Match m in ReNumber.Matches(token))
-                    value += " " + m.Groups[0].Value;
+                string value = ReNumber.Matches(token).Cast<Match>().Aggregate("", (current, m) => current + (" " + m.Groups[0].Value));
                 value = value.TrimStart();
 
                 // Replace numbers with 'x'.

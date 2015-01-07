@@ -18,69 +18,62 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using MahApps.Metro;
-using MahApps.Metro.Controls;
 using POESKillTree.Controls;
 using POESKillTree.Model;
 using POESKillTree.SkillTreeFiles;
 using POESKillTree.Utils;
 using POESKillTree.ViewModels;
 using POESKillTree.ViewModels.ItemAttribute;
-using Application = System.Windows.Application;
 using Attribute = POESKillTree.ViewModels.Attribute;
-using Clipboard = System.Windows.Clipboard;
-using DataObject = System.Windows.DataObject;
-using DragDropEffects = System.Windows.DragDropEffects;
-using DragEventArgs = System.Windows.DragEventArgs;
-using KeyEventArgs = System.Windows.Input.KeyEventArgs;
-using ListView = System.Windows.Controls.ListView;
-using ListViewItem = System.Windows.Controls.ListViewItem;
 using MessageBox = POESKillTree.Views.MetroMessageBox;
-using MouseEventArgs = System.Windows.Input.MouseEventArgs;
-using ToolTip = System.Windows.Controls.ToolTip;
 
 namespace POESKillTree.Views
 {
     /// <summary>
     ///     Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : MetroWindow
+    public partial class MainWindow
     {
-        private readonly PersistentData _persistentData = new PersistentData();
+        private const string TreeAddress = "http://www.pathofexile.com/passive-skill-tree/";
+        private const int TrivialMouseMoveThreshold = 25;
         private static readonly Action EmptyDelegate = delegate { };
         private readonly List<Attribute> _allAttributesList = new List<Attribute>();
         private readonly List<Attribute> _attiblist = new List<Attribute>();
-        private readonly List<ListGroupItem> _defenceList = new List<ListGroupItem>();
-        private readonly Dictionary<string, AttributeGroup> _defenceListGroups = new Dictionary<string, AttributeGroup>();
-        private readonly List<ListGroupItem> _offenceList = new List<ListGroupItem>();
-        private readonly Dictionary<string, AttributeGroup> _offenceListGroups = new Dictionary<string, AttributeGroup>();
         private readonly Regex _backreplace = new Regex("#");
-        private readonly ToolTip _sToolTip = new ToolTip();
+        private readonly List<ListGroupItem> _defenceList = new List<ListGroupItem>();
+
+        private readonly Dictionary<string, AttributeGroup> _defenceListGroups =
+            new Dictionary<string, AttributeGroup>();
+
         private readonly ToolTip _noteTip = new ToolTip();
+        private readonly List<ListGroupItem> _offenceList = new List<ListGroupItem>();
+
+        private readonly Dictionary<string, AttributeGroup> _offenceListGroups =
+            new Dictionary<string, AttributeGroup>();
+
+        private readonly PersistentData _persistentData = new PersistentData();
+        private readonly Stack<string> _redoList = new Stack<string>();
+        private readonly ToolTip _sToolTip = new ToolTip();
+        private readonly Stack<string> _undoList = new Stack<string>();
+        private Vector2D _addtransform;
+        private DragAdorner _adorner;
         private ListCollectionView _allAttributeCollection;
         private ListCollectionView _attibuteCollection;
-        private ListCollectionView _defenceCollection;
-        private ListCollectionView _offenceCollection;
         private RenderTargetBitmap _clipboardBmp;
-
+        private SkillNode _currentNode;
+        private ListCollectionView _defenceCollection;
+        private Point _dragAndDropStartPoint;
         private ItemAttributes _itemAttributes;
-        protected SkillTree Tree;
-        private const string TreeAddress = "http://www.pathofexile.com/passive-skill-tree/";
-        private Vector2D _addtransform;
         private bool _justLoaded;
+        private Vector2D _lastpos;
         private string _lasttooltip;
-
+        private AdornerLayer _layer;
         private LoadingWindow _loadingWindow;
         private Vector2D _multransform;
-
+        private ListCollectionView _offenceCollection;
         private List<ushort> _prePath;
         private HashSet<ushort> _toRemove;
-
-        readonly Stack<string> _undoList = new Stack<string>();
-        readonly Stack<string> _redoList = new Stack<string>();
-
-        private Point _dragAndDropStartPoint;
-        private DragAdorner _adorner;
-        private AdornerLayer _layer;
+        protected SkillTree Tree;
 
         public MainWindow()
         {
@@ -92,7 +85,7 @@ namespace POESKillTree.Views
 
         #region Window methods
 
-        private void Window_Loaded(object sender, RoutedEventArgs e)
+        private void WindowLoaded(object sender, RoutedEventArgs e)
         {
             ItemDB.Load("Items.xml");
             if (File.Exists("ItemsLocal.xml"))
@@ -101,23 +94,27 @@ namespace POESKillTree.Views
 
             _attibuteCollection = new ListCollectionView(_attiblist);
             listBox1.ItemsSource = _attibuteCollection;
+            Debug.Assert(_attibuteCollection.GroupDescriptions != null, "_attibuteCollection.GroupDescriptions != null");
             _attibuteCollection.GroupDescriptions.Add(new PropertyGroupDescription("Text")
-            {
-                Converter = new GroupStringConverter()
-            });
+                                                      {
+                                                          Converter = new GroupStringConverter()
+                                                      });
 
             _allAttributeCollection = new ListCollectionView(_allAttributesList);
+            Debug.Assert(_allAttributeCollection.GroupDescriptions != null, "_allAttributeCollection.GroupDescriptions != null");
             _allAttributeCollection.GroupDescriptions.Add(new PropertyGroupDescription("Text")
-            {
-                Converter = new GroupStringConverter()
-            });
+                                                          {
+                                                              Converter = new GroupStringConverter()
+                                                          });
             lbAllAttr.ItemsSource = _allAttributeCollection;
 
             _defenceCollection = new ListCollectionView(_defenceList);
+            Debug.Assert(_defenceCollection.GroupDescriptions != null, "_defenceCollection.GroupDescriptions != null");
             _defenceCollection.GroupDescriptions.Add(new PropertyGroupDescription("Group"));
             listBoxDefence.ItemsSource = _defenceCollection;
 
             _offenceCollection = new ListCollectionView(_offenceList);
+            Debug.Assert(_offenceCollection.GroupDescriptions != null, "_offenceCollection.GroupDescriptions != null");
             _offenceCollection.GroupDescriptions.Add(new PropertyGroupDescription("Group"));
             listBoxOffence.ItemsSource = _offenceCollection;
 
@@ -146,7 +143,7 @@ namespace POESKillTree.Views
             if (_persistentData.CurrentBuild != null)
                 SetCurrentBuild(_persistentData.CurrentBuild);
 
-            btnLoadBuild_Click(this, new RoutedEventArgs());
+            BtnLoadBuildClick(this, new RoutedEventArgs());
             _justLoaded = false;
 
             // loading saved build
@@ -159,7 +156,7 @@ namespace POESKillTree.Views
             ImportLegacySavedBuilds();
         }
 
-        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        private void WindowPreviewKeyDown(object sender, KeyEventArgs e)
         {
             if (Keyboard.Modifiers == ModifierKeys.Control)
             {
@@ -172,10 +169,10 @@ namespace POESKillTree.Views
                         ToggleBuilds();
                         break;
                     case Key.R:
-                        btnReset_Click(sender, e);
+                        BtnResetClick(sender, e);
                         break;
                     case Key.E:
-                        btnPoeUrl_Click(sender, e);
+                        BtnPoeUrlClick(sender, e);
                         break;
                     case Key.D1:
                         cbCharType.SelectedIndex = 0;
@@ -199,10 +196,10 @@ namespace POESKillTree.Views
                         cbCharType.SelectedIndex = 6;
                         break;
                     case Key.Z:
-                        tbSkillURL_Undo();
+                        TbSkillUrlUndo();
                         break;
                     case Key.Y:
-                        tbSkillURL_Redo();
+                        TbSkillUrlRedo();
                         break;
                     case Key.S:
                         SaveNewBuild();
@@ -211,11 +208,11 @@ namespace POESKillTree.Views
             }
         }
 
-        private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
+        private void WindowSizeChanged(object sender, SizeChangedEventArgs e)
         {
         }
 
-        private void Window_Closing(object sender, CancelEventArgs e)
+        private void WindowClosing(object sender, CancelEventArgs e)
         {
             _persistentData.CurrentBuild.Url = tbSkillURL.Text;
             _persistentData.CurrentBuild.Level = tbLevel.Text;
@@ -259,7 +256,7 @@ namespace POESKillTree.Views
 
         #region Menu
 
-        private void Menu_SkillHighlightedNodes(object sender, RoutedEventArgs e)
+        private void MenuSkillHighlightedNodes(object sender, RoutedEventArgs e)
         {
             var currentCursor = Cursor;
             try
@@ -275,34 +272,36 @@ namespace POESKillTree.Views
             }
         }
 
-        private void Menu_ScreenShot(object sender, RoutedEventArgs e)
+        private void MenuScreenShot(object sender, RoutedEventArgs e)
         {
             const int maxsize = 3000;
-            Rect2D contentBounds = Tree.picActiveLinks.ContentBounds;
+            Rect2D contentBounds = Tree.PicActiveLinks.ContentBounds;
             contentBounds *= 1.2;
             if (!double.IsNaN(contentBounds.Width) && !double.IsNaN(contentBounds.Height))
             {
-                double aspect = contentBounds.Width / contentBounds.Height;
-                double xmax = contentBounds.Width;
-                double ymax = contentBounds.Height;
+                var aspect = contentBounds.Width/contentBounds.Height;
+                var xmax = contentBounds.Width;
+                var ymax = contentBounds.Height;
                 if (aspect > 1 && xmax > maxsize)
                 {
                     xmax = maxsize;
-                    ymax = xmax / aspect;
+                    ymax = xmax/aspect;
                 }
                 if (aspect < 1 & ymax > maxsize)
                 {
                     ymax = maxsize;
-                    xmax = ymax * aspect;
+                    xmax = ymax*aspect;
                 }
 
-                _clipboardBmp = new RenderTargetBitmap((int)xmax, (int)ymax, 96, 96, PixelFormats.Pbgra32);
-                var db = new VisualBrush(Tree.SkillTreeVisual);
-                db.ViewboxUnits = BrushMappingMode.Absolute;
-                db.Viewbox = contentBounds;
+                _clipboardBmp = new RenderTargetBitmap((int) xmax, (int) ymax, 96, 96, PixelFormats.Pbgra32);
+                var db = new VisualBrush(Tree.SkillTreeVisual)
+                         {
+                             ViewboxUnits = BrushMappingMode.Absolute,
+                             Viewbox = contentBounds
+                         };
                 var dw = new DrawingVisual();
 
-                using (DrawingContext dc = dw.RenderOpen())
+                using (var dc = dw.RenderOpen())
                 {
                     dc.DrawRectangle(db, null, new Rect(0, 0, xmax, ymax));
                 }
@@ -314,19 +313,20 @@ namespace POESKillTree.Views
                 recSkillTree.Fill = new VisualBrush(Tree.SkillTreeVisual);
             }
         }
-        private void Menu_ImportItems(object sender, RoutedEventArgs e)
+
+        private void MenuImportItems(object sender, RoutedEventArgs e)
         {
-            var diw = new DownloadItemsWindow(_persistentData.CurrentBuild.CharacterName) { Owner = this };
+            var diw = new DownloadItemsWindow(_persistentData.CurrentBuild.CharacterName) {Owner = this};
             diw.ShowDialog();
             _persistentData.CurrentBuild.CharacterName = diw.GetCharacterName();
         }
 
-        private void Menu_ClearItems(object sender, RoutedEventArgs e)
+        private void MenuClearItems(object sender, RoutedEventArgs e)
         {
             ClearCurrentItemData();
         }
 
-        private void Menu_CopyStats(object sender, RoutedEventArgs e)
+        private void MenuCopyStats(object sender, RoutedEventArgs e)
         {
             var sb = new StringBuilder();
             foreach (var at in _attiblist)
@@ -339,16 +339,19 @@ namespace POESKillTree.Views
             }
             catch (Exception)
             {
-                MessageBox.Show("Clipboard could not be copied to. Please try again.", "Failed Copy!", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Clipboard could not be copied to. Please try again.", "Failed Copy!",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        private void Menu_RedownloadTreeAssets(object sender, RoutedEventArgs e)
+        private void MenuRedownloadTreeAssets(object sender, RoutedEventArgs e)
         {
-            const string sMessageBoxText = "This will delete your data folder and Redownload all the SkillTree assets.\nThis requires an internet connection!\n\nDo you want to proced?";
+            const string sMessageBoxText =
+                "This will delete your data folder and Redownload all the SkillTree assets.\nThis requires an internet connection!\n\nDo you want to proced?";
             const string sCaption = "Redownload SkillTree Assets - Warning";
 
-            var rsltMessageBox = MessageBox.Show(sMessageBoxText, sCaption, MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+            var rsltMessageBox = MessageBox.Show(sMessageBoxText, sCaption, MessageBoxButton.YesNo,
+                MessageBoxImage.Warning, MessageBoxResult.No);
             switch (rsltMessageBox)
             {
                 case MessageBoxResult.Yes:
@@ -363,7 +366,7 @@ namespace POESKillTree.Views
                             Tree = SkillTree.CreateSkillTree(StartLoadingWindow, UpdateLoadingWindow, CloseLoadingWindow);
                             recSkillTree.Fill = new VisualBrush(Tree.SkillTreeVisual);
 
-                            btnLoadBuild_Click(this, new RoutedEventArgs());
+                            BtnLoadBuildClick(this, new RoutedEventArgs());
                             _justLoaded = false;
 
                             if (Directory.Exists("DataBackup"))
@@ -382,7 +385,8 @@ namespace POESKillTree.Views
                                 //Nothing
                             }
                             Directory.Move("DataBackup", "Data");
-                            MessageBox.Show(ex.Message.ToString(), "Error while downloading assets", MessageBoxButton.OK, MessageBoxImage.Error);
+                            MessageBox.Show(ex.Message, "Error while downloading assets", MessageBoxButton.OK,
+                                MessageBoxImage.Error);
                         }
                     }
                     break;
@@ -393,45 +397,45 @@ namespace POESKillTree.Views
             }
         }
 
-        private void Menu_Exit(object sender, RoutedEventArgs e)
+        private void MenuExit(object sender, RoutedEventArgs e)
         {
             Application.Current.Shutdown();
         }
 
-        private void Menu_OpenPoEWebsite(object sender, RoutedEventArgs e)
+        private void MenuOpenPoEWebsite(object sender, RoutedEventArgs e)
         {
             Process.Start("https://www.pathofexile.com/");
         }
 
-        private void Menu_OpenWiki(object sender, RoutedEventArgs e)
+        private void MenuOpenWiki(object sender, RoutedEventArgs e)
         {
             Process.Start("http://pathofexile.gamepedia.com/");
         }
 
-        private void Menu_OpenHelp(object sender, RoutedEventArgs e)
+        private void MenuOpenHelp(object sender, RoutedEventArgs e)
         {
             var helpWindow = new HelpWindow();
             helpWindow.ShowDialog();
         }
 
-        private void Menu_OpenHotkeys(object sender, RoutedEventArgs e)
+        private void MenuOpenHotkeys(object sender, RoutedEventArgs e)
         {
             var aboutWindow = new HotkeysWindow();
             aboutWindow.ShowDialog();
         }
 
-        private void Menu_OpenAbout(object sender, RoutedEventArgs e)
+        private void MenuOpenAbout(object sender, RoutedEventArgs e)
         {
             var aboutWindow = new AboutWindow();
             aboutWindow.ShowDialog();
         }
 
         // Checks for updates.
-        private void  Menu_CheckForUpdates(object sender, RoutedEventArgs e)
+        private void MenuCheckForUpdates(object sender, RoutedEventArgs e)
         {
             try
             {
-                Updater.Release release = Updater.CheckForUpdates();
+                var release = Updater.CheckForUpdates();
                 if (release == null)
                 {
                     MessageBox.Show("You have the lastest version!", "No update found.");
@@ -439,30 +443,33 @@ namespace POESKillTree.Views
                 else
                 {
                     var message = "Would you like to install " + release.Version + "?";
-                    MessageBoxResult download = new MessageBoxResult();
+                    MessageBoxResult download;
                     if (release.Version.ToLower().Contains("pre"))
                     {
-                        download = MessageBox.Show(message + "\nThis is a pre-release, meaning there could be some bugs!", "Pre-release Found!", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                        download =
+                            MessageBox.Show(message + "\nThis is a pre-release, meaning there could be some bugs!",
+                                "Pre-release Found!", MessageBoxButton.YesNo, MessageBoxImage.Warning);
                     }
                     else
-                        download = MessageBox.Show(message, "Release Found!", MessageBoxButton.YesNo, MessageBoxImage.None);
+                        download = MessageBox.Show(message, "Release Found!", MessageBoxButton.YesNo);
 
                     if (download == MessageBoxResult.Yes)
-                        btnUpdateInstall(sender, e);
+                        BtnUpdateInstall();
                     else
-                        btnUpdateCancel(sender, e);
+                        btnUpdateCancel();
                     // Show dialog with release informations and "Install & Restart" button.
                 }
             }
             catch (UpdaterException ex)
             {
                 // Display error message: ex.Message.
-                MessageBox.Show(ex.Message.ToString(), "Error while checking for updates", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(ex.Message, "Error while checking for updates", MessageBoxButton.OK,
+                    MessageBoxImage.Error);
             }
         }
 
         // Starts update process.
-        private void btnUpdateInstall(object sender, RoutedEventArgs e)
+        private void BtnUpdateInstall()
         {
             try
             {
@@ -474,12 +481,12 @@ namespace POESKillTree.Views
             catch (UpdaterException ex)
             {
                 // Display error message: ex.Message.
-                MessageBox.Show(ex.Message.ToString(), "Failed to install update!");
+                MessageBox.Show(ex.Message, "Failed to install update!");
             }
         }
 
         // Cancels update download (also invoked when download progress dialog is closed).
-        private void btnUpdateCancel(object sender, RoutedEventArgs e)
+        private void btnUpdateCancel()
         {
             if (Updater.IsDownloading)
                 Updater.Cancel();
@@ -501,7 +508,7 @@ namespace POESKillTree.Views
             else if (e.Error != null) // Check whether error occured.
             {
                 // Display error message: e.Error.Message.
-                MessageBox.Show(e.Error.Message.ToString(), "Failed to install update!");
+                MessageBox.Show(e.Error.Message, "Failed to install update!");
             }
             else // Download completed.
             {
@@ -514,7 +521,7 @@ namespace POESKillTree.Views
                 {
                     Updater.Dispose();
                     // Display error message: ex.Message.
-                    MessageBox.Show(ex.Message.ToString(), "Failed to install update!");
+                    MessageBox.Show(ex.Message, "Failed to install update!");
                 }
             }
             CloseLoadingWindow();
@@ -531,7 +538,7 @@ namespace POESKillTree.Views
 
         #region  Character Selection
 
-        private void cbCharType_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void CbCharTypeSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (_justLoaded)
             {
@@ -541,12 +548,12 @@ namespace POESKillTree.Views
 
             if (Tree == null)
                 return;
-            var ComboItem = (ComboBoxItem)cbCharType.SelectedItem;
-            var className = ComboItem.Name;
+            var comboItem = (ComboBoxItem) cbCharType.SelectedItem;
+            var className = comboItem.Name;
 
             if (Tree.CanSwitchClass(className))
             {
-                var currentClassArray = getCurrentClass();
+                var currentClassArray = GetCurrentClass();
                 var changeClassArray = getAnyClass(className);
 
                 if (currentClassArray[0] == "ERROR")
@@ -573,7 +580,7 @@ namespace POESKillTree.Views
             tbSkillURL.Text = Tree.SaveToURL();
         }
 
-        private void tbLevel_TextChanged(object sender, TextChangedEventArgs e)
+        private void TbLevelTextChanged(object sender, TextChangedEventArgs e)
         {
             int lvl;
             if (!int.TryParse(tbLevel.Text, out lvl)) return;
@@ -581,7 +588,7 @@ namespace POESKillTree.Views
             UpdateAllAttributeList();
         }
 
-        private void btnReset_Click(object sender, RoutedEventArgs e)
+        private void BtnResetClick(object sender, RoutedEventArgs e)
         {
             if (Tree == null)
                 return;
@@ -600,12 +607,12 @@ namespace POESKillTree.Views
 
             if (_itemAttributes != null)
             {
-                Dictionary<string, List<float>> attritemp = Tree.SelectedAttributesWithoutImplicit;
-                foreach (ItemAttributes.Attribute mod in _itemAttributes.NonLocalMods)
+                var attritemp = Tree.SelectedAttributesWithoutImplicit;
+                foreach (var mod in _itemAttributes.NonLocalMods)
                 {
                     if (attritemp.ContainsKey(mod.TextAttribute))
                     {
-                        for (int i = 0; i < mod.Value.Count; i++)
+                        for (var i = 0; i < mod.Value.Count; i++)
                         {
                             attritemp[mod.TextAttribute][i] += mod.Value[i];
                         }
@@ -618,13 +625,13 @@ namespace POESKillTree.Views
 
                 foreach (var a in Tree.ImplicitAttributes(attritemp))
                 {
-                    string key = SkillTree.RenameImplicitAttributes.ContainsKey(a.Key)
+                    var key = SkillTree.RenameImplicitAttributes.ContainsKey(a.Key)
                         ? SkillTree.RenameImplicitAttributes[a.Key]
                         : a.Key;
 
                     if (!attritemp.ContainsKey(key))
                         attritemp[key] = new List<float>();
-                    for (int i = 0; i < a.Value.Count; i++)
+                    for (var i = 0; i < a.Value.Count; i++)
                     {
                         if (attritemp.ContainsKey(key) && attritemp[key].Count > i)
                             attritemp[key][i] += a.Value[i];
@@ -635,7 +642,7 @@ namespace POESKillTree.Views
                     }
                 }
 
-                foreach (string item in (attritemp.Select(InsertNumbersInAttributes)))
+                foreach (var item in (attritemp.Select(InsertNumbersInAttributes)))
                 {
                     var a = new Attribute(item);
                     _allAttributesList.Add(a);
@@ -670,7 +677,7 @@ namespace POESKillTree.Views
             {
                 Compute.Initialize(Tree, _itemAttributes);
 
-                foreach (ListGroup group in Compute.Defense())
+                foreach (var group in Compute.Defense())
                 {
                     foreach (var item in group.Properties.Select(InsertNumbersInAttributes))
                     {
@@ -684,7 +691,7 @@ namespace POESKillTree.Views
                     }
                 }
 
-                foreach (ListGroup group in Compute.Offense())
+                foreach (var group in Compute.Offense())
                 {
                     foreach (var item in group.Properties.Select(InsertNumbersInAttributes))
                     {
@@ -705,12 +712,7 @@ namespace POESKillTree.Views
 
         private string InsertNumbersInAttributes(KeyValuePair<string, List<float>> attrib)
         {
-            string s = attrib.Key;
-            foreach (float f in attrib.Value)
-            {
-                s = _backreplace.Replace(s, f + "", 1);
-            }
-            return s;
+            return attrib.Value.Aggregate(attrib.Key, (current, f) => _backreplace.Replace(current, f + "", 1));
         }
 
         #endregion
@@ -723,12 +725,12 @@ namespace POESKillTree.Views
             expAttributes.IsExpanded = !expAttributes.IsExpanded;
         }
 
-        private void ToggleAttributes_Click(object sender, RoutedEventArgs e)
+        private void ToggleAttributesClick(object sender, RoutedEventArgs e)
         {
             ToggleAttributes();
         }
 
-        private void expAttributes_Collapsed(object sender, RoutedEventArgs e)
+        private void ExpAttributesCollapsed(object sender, RoutedEventArgs e)
         {
             if (sender == e.Source) // Ignore contained ListBox group collapsion events.
             {
@@ -736,7 +738,7 @@ namespace POESKillTree.Views
             }
         }
 
-        private void expAttributes_Expanded(object sender, RoutedEventArgs e)
+        private void ExpAttributesExpanded(object sender, RoutedEventArgs e)
         {
             if (sender == e.Source) // Ignore contained ListBox group collapsion events.
             {
@@ -746,7 +748,7 @@ namespace POESKillTree.Views
             }
         }
 
-        private void TextBlock_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        private void TextBlockMouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
             var selectedAttr =
                 Regex.Replace(
@@ -757,12 +759,12 @@ namespace POESKillTree.Views
             Tree.HighlightNodes(selectedAttr, true, Brushes.Azure);
         }
 
-        private void expAttributes_MouseLeave(object sender, MouseEventArgs e)
+        private void ExpAttributesMouseLeave(object sender, MouseEventArgs e)
         {
             SearchUpdate();
         }
 
-        private void expSheet_Expanded(object sender, RoutedEventArgs e)
+        private void ExpSheetExpanded(object sender, RoutedEventArgs e)
         {
             if (sender == e.Source) // Ignore contained ListBox group expansion events.
             {
@@ -776,17 +778,17 @@ namespace POESKillTree.Views
             expSavedBuilds.IsExpanded = !expSavedBuilds.IsExpanded;
         }
 
-        private void ToggleBuilds_Click(object sender, RoutedEventArgs e)
+        private void ToggleBuildsClick(object sender, RoutedEventArgs e)
         {
             ToggleBuilds();
         }
 
-        private void expSavedBuilds_Collapsed(object sender, RoutedEventArgs e)
+        private void ExpSavedBuildsCollapsed(object sender, RoutedEventArgs e)
         {
             mnuViewBuilds.IsChecked = false;
         }
 
-        private void expSavedBuilds_Expanded(object sender, RoutedEventArgs e)
+        private void ExpSavedBuildsExpanded(object sender, RoutedEventArgs e)
         {
             mnuViewBuilds.IsChecked = true;
         }
@@ -795,9 +797,9 @@ namespace POESKillTree.Views
 
         #region zbSkillTreeBackground
 
-        private void zbSkillTreeBackground_Click(object sender, RoutedEventArgs e)
+        private void ZbSkillTreeBackgroundClick(object sender, RoutedEventArgs e)
         {
-            Point p = ((MouseEventArgs) e.OriginalSource).GetPosition(zbSkillTreeBackground.Child);
+            var p = ((MouseEventArgs) e.OriginalSource).GetPosition(zbSkillTreeBackground.Child);
             var v = new Vector2D(p.X, p.Y);
 
             v = v*_multransform + _addtransform;
@@ -820,7 +822,7 @@ namespace POESKillTree.Views
                     }
                     else if (_prePath != null)
                     {
-                        foreach (ushort i in _prePath)
+                        foreach (var i in _prePath)
                         {
                             Tree.SkilledNodes.Add(i);
                         }
@@ -836,7 +838,7 @@ namespace POESKillTree.Views
             tbSkillURL.Text = Tree.SaveToURL();
         }
 
-        private void zbSkillTreeBackground_MouseLeave(object sender, MouseEventArgs e)
+        private void ZbSkillTreeBackgroundMouseLeave(object sender, MouseEventArgs e)
         {
             // We might have popped up a tooltip while the window didn't have focus,
             // so we should close tooltips whenever the mouse leaves the canvas in addition to
@@ -844,13 +846,17 @@ namespace POESKillTree.Views
             _sToolTip.IsOpen = false;
         }
 
-        private void zbSkillTreeBackground_MouseMove(object sender, MouseEventArgs e)
+        private void ZbSkillTreeBackgroundMouseMove(object sender, MouseEventArgs e)
         {
-            Point p = e.GetPosition(zbSkillTreeBackground.Child);
-            var v = new Vector2D(p.X, p.Y);
+            var p = e.GetPosition(zbSkillTreeBackground.Child);
+       
+            var v = (Vector2D)p;
             v = v*_multransform + _addtransform;
             textBox1.Text = "" + v.X;
             textBox2.Text = "" + v.Y;
+            if ((_lastpos - v).Length < TrivialMouseMoveThreshold) return;
+            _lastpos = v;
+
             SkillNode node = null;
 
             IEnumerable<KeyValuePair<ushort, SkillNode>> nodes =
@@ -860,39 +866,47 @@ namespace POESKillTree.Views
 
             if (node != null && node.Attributes.Count != 0)
             {
-                var tooltip = node.Name + "\n" + node.attributes.Aggregate((s1, s2) => s1 + "\n" + s2);
-                if (!(_sToolTip.IsOpen && _lasttooltip == tooltip))
+                if (_currentNode != node)
                 {
-                    _sToolTip.Content = tooltip;
-                    _sToolTip.IsOpen = true;
-                    _lasttooltip = tooltip;
-                }
-                if (Tree.SkilledNodes.Contains(node.Id))
-                {
-                    _toRemove = Tree.ForceRefundNodePreview(node.Id);
-                    if (_toRemove != null)
-                        Tree.DrawRefundPreview(_toRemove);
-                }
-                else
-                {
-                    _prePath = Tree.GetShortestPathTo(node.Id);
-                    Tree.DrawPath(_prePath);
+                    var tooltip = node.Name + "\n" + node.attributes.Aggregate((s1, s2) => s1 + "\n" + s2);
+                    if (!(_sToolTip.IsOpen && _lasttooltip == tooltip))
+                    {
+                        _sToolTip.Content = tooltip;
+                        _sToolTip.IsOpen = true;
+                        _lasttooltip = tooltip;
+                    }
+                    if (Tree.SkilledNodes.Contains(node.Id))
+                    {
+                        _toRemove = Tree.ForceRefundNodePreview(node.Id);
+                        if (_toRemove != null)
+                            Tree.DrawRefundPreview(_toRemove);
+                    }
+                    else
+                    {
+                        _prePath = Tree.GetShortestPathTo(node.Id);
+                        Tree.DrawPath(_prePath);
+                    }
+                    _currentNode = node;
                 }
             }
             else
             {
-                _sToolTip.Tag = false;
-                _sToolTip.IsOpen = false;
-                _prePath = null;
-                _toRemove = null;
-                if (Tree != null)
+                if (_currentNode != null)
                 {
-                    Tree.ClearPath();
+                    _sToolTip.Tag = false;
+                    _sToolTip.IsOpen = false;
+                    _prePath = null;
+                    _toRemove = null;
+                    if (Tree != null)
+                    {
+                        Tree.ClearPath();
+                    }
+                    _currentNode = null;
                 }
             }
         }
 
-        private void zbSkillTreeBackground_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        private void ZbSkillTreeBackgroundPreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
             zbSkillTreeBackground.Child.RaiseEvent(e);
         }
@@ -912,7 +926,7 @@ namespace POESKillTree.Views
                     lbItemAttr.ItemsSource = _itemAttributes.Attributes;
                     mnuClearItems.IsEnabled = true;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     MessageBox.Show("Item data currupted!");
                     _persistentData.CurrentBuild.ItemData = "";
@@ -942,37 +956,38 @@ namespace POESKillTree.Views
 
         #region Builds - Event Handlers
 
-        private void lvi_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        private void LviMouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            var lvi = ((ListView)sender).SelectedItem;
+            var lvi = ((ListView) sender).SelectedItem;
             if (lvi == null) return;
-            var build = ((PoEBuild)lvi);
+            var build = ((PoEBuild) lvi);
             SetCurrentBuild(build);
-            btnLoadBuild_Click(this, null); // loading the build
+            BtnLoadBuildClick(this, null); // loading the build
         }
 
-        private void lvi_MouseLeave(object sender, MouseEventArgs e)
+        private void LviMouseLeave(object sender, MouseEventArgs e)
         {
             _noteTip.IsOpen = false;
         }
 
-        private void lvi_MouseEnter(object sender, MouseEventArgs e)
+        private void LviMouseEnter(object sender, MouseEventArgs e)
         {
             var highlightedItem = FindListViewItem(e);
             if (highlightedItem != null)
             {
-                var build = (PoEBuild)highlightedItem.Content;
+                var build = (PoEBuild) highlightedItem.Content;
                 _noteTip.Content = build.Note == @"" ? @"Right Click To Edit" : build.Note;
                 _noteTip.IsOpen = true;
             }
         }
 
-        private void lvi_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        private void LviMouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
-            var selectedBuild = (PoEBuild)lvSavedBuilds.SelectedItem;
-            var formBuildName = new FormChooseBuildName(selectedBuild.Name, selectedBuild.Note, selectedBuild.CharacterName, selectedBuild.ItemData);
-            var show_dialog = formBuildName.ShowDialog();
-            if (show_dialog != null && (bool)show_dialog)
+            var selectedBuild = (PoEBuild) lvSavedBuilds.SelectedItem;
+            var formBuildName = new FormChooseBuildName(selectedBuild.Name, selectedBuild.Note,
+                selectedBuild.CharacterName, selectedBuild.ItemData);
+            var showDialog = formBuildName.ShowDialog();
+            if (showDialog != null && (bool) showDialog)
             {
                 selectedBuild.Name = formBuildName.GetBuildName();
                 selectedBuild.Note = formBuildName.GetNote();
@@ -1008,16 +1023,16 @@ namespace POESKillTree.Views
             return listViewItem;
         }
 
-        private void btnSaveNewBuild_Click(object sender, RoutedEventArgs e)
+        private void BtnSaveNewBuildClick(object sender, RoutedEventArgs e)
         {
             SaveNewBuild();
         }
 
-        private void btnOverwriteBuild_Click(object sender, RoutedEventArgs e)
+        private void BtnOverwriteBuildClick(object sender, RoutedEventArgs e)
         {
             if (lvSavedBuilds.SelectedItems.Count > 0)
             {
-                var selectedBuild = (PoEBuild)lvSavedBuilds.SelectedItem;
+                var selectedBuild = (PoEBuild) lvSavedBuilds.SelectedItem;
                 selectedBuild.Class = cbCharType.Text;
                 selectedBuild.CharacterName = _persistentData.CurrentBuild.CharacterName;
                 selectedBuild.Level = tbLevel.Text;
@@ -1034,7 +1049,7 @@ namespace POESKillTree.Views
             }
         }
 
-        private void btnDelete_Click(object sender, RoutedEventArgs e)
+        private void BtnDeleteClick(object sender, RoutedEventArgs e)
         {
             if (lvSavedBuilds.SelectedItems.Count > 0)
             {
@@ -1043,7 +1058,7 @@ namespace POESKillTree.Views
             }
         }
 
-        private void lvSavedBuilds_KeyUp(object sender, KeyEventArgs e)
+        private void LvSavedBuildsKeyUp(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Up && (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl)) &&
                 lvSavedBuilds.SelectedIndex > 0)
@@ -1074,6 +1089,7 @@ namespace POESKillTree.Views
         #endregion
 
         #region Builds - Services
+
         private void SetCurrentBuild(PoEBuild build)
         {
             _persistentData.CurrentBuild = PoEBuild.Copy(build);
@@ -1085,21 +1101,22 @@ namespace POESKillTree.Views
 
         private void SaveNewBuild()
         {
-            var formBuildName = new FormChooseBuildName(_persistentData.CurrentBuild.CharacterName, _persistentData.CurrentBuild.ItemData);
-            var show_dialog = formBuildName.ShowDialog();
-            if (show_dialog != null && (bool)show_dialog)
+            var formBuildName = new FormChooseBuildName(_persistentData.CurrentBuild.CharacterName,
+                _persistentData.CurrentBuild.ItemData);
+            var showDialog = formBuildName.ShowDialog();
+            if (showDialog != null && (bool) showDialog)
             {
                 var newBuild = new PoEBuild
-                {
-                    Name = formBuildName.GetBuildName(),
-                    Level = tbLevel.Text,
-                    Class = cbCharType.Text,
-                    PointsUsed = tbUsedPoints.Text,
-                    Url = tbSkillURL.Text,
-                    Note = formBuildName.GetNote(),
-                    CharacterName = formBuildName.GetCharacterName(),
-                    ItemData = formBuildName.GetItemData()
-                };
+                               {
+                                   Name = formBuildName.GetBuildName(),
+                                   Level = tbLevel.Text,
+                                   Class = cbCharType.Text,
+                                   PointsUsed = tbUsedPoints.Text,
+                                   Url = tbSkillURL.Text,
+                                   Note = formBuildName.GetNote(),
+                                   CharacterName = formBuildName.GetCharacterName(),
+                                   ItemData = formBuildName.GetItemData()
+                               };
                 SetCurrentBuild(newBuild);
                 lvSavedBuilds.Items.Add(newBuild);
             }
@@ -1127,22 +1144,22 @@ namespace POESKillTree.Views
                 else if (tbSkillURL.Text.Contains("poebuilder.com/"))
                 {
                     const string poebuilderTree = "https://poebuilder.com/character/";
-                    const string poebuilderTreeWWW = "https://www.poebuilder.com/character/";
-                    const string poebuilderTreeOWWW = "http://www.poebuilder.com/character/";
+                    const string poebuilderTreeWww = "https://www.poebuilder.com/character/";
+                    const string poebuilderTreeOwww = "http://www.poebuilder.com/character/";
                     const string poebuilderTreeO = "http://poebuilder.com/character/";
                     var urlString = tbSkillURL.Text;
-                    urlString = urlString.Replace(poebuilderTree, MainWindow.TreeAddress);
-                    urlString = urlString.Replace(poebuilderTreeO, MainWindow.TreeAddress);
-                    urlString = urlString.Replace(poebuilderTreeWWW, MainWindow.TreeAddress);
-                    urlString = urlString.Replace(poebuilderTreeOWWW, MainWindow.TreeAddress);
+                    urlString = urlString.Replace(poebuilderTree, TreeAddress);
+                    urlString = urlString.Replace(poebuilderTreeO, TreeAddress);
+                    urlString = urlString.Replace(poebuilderTreeWww, TreeAddress);
+                    urlString = urlString.Replace(poebuilderTreeOwww, TreeAddress);
                     tbSkillURL.Text = urlString;
                     Tree.LoadFromURL(urlString);
                 }
                 else if (tbSkillURL.Text.Contains("tinyurl.com/"))
                 {
-                    var request = (HttpWebRequest)WebRequest.Create(tbSkillURL.Text);
+                    var request = (HttpWebRequest) WebRequest.Create(tbSkillURL.Text);
                     request.AllowAutoRedirect = false;
-                    var response = (HttpWebResponse)request.GetResponse();
+                    var response = (HttpWebResponse) request.GetResponse();
                     var redirUrl = response.Headers["Location"];
                     tbSkillURL.Text = redirUrl;
                     LoadBuildFromUrl();
@@ -1151,9 +1168,9 @@ namespace POESKillTree.Views
                 {
                     tbSkillURL.Text = tbSkillURL.Text.Replace("http://poeurl.com/",
                         "http://poeurl.com/redirect.php?url=");
-                    var request = (HttpWebRequest)WebRequest.Create(tbSkillURL.Text);
+                    var request = (HttpWebRequest) WebRequest.Create(tbSkillURL.Text);
                     request.AllowAutoRedirect = false;
-                    var response = (HttpWebResponse)request.GetResponse();
+                    var response = (HttpWebResponse) request.GetResponse();
                     var redirUrl = response.Headers["Location"];
                     tbSkillURL.Text = redirUrl;
                     LoadBuildFromUrl();
@@ -1167,7 +1184,7 @@ namespace POESKillTree.Views
                 {
                     if (_undoList.Count > 1)
                     {
-                        string holder = _undoList.Pop();
+                        var holder = _undoList.Pop();
                         _undoList.Pop();
                         _undoList.Push(holder);
                     }
@@ -1181,6 +1198,7 @@ namespace POESKillTree.Views
                 MessageBox.Show("The Build you tried to load, is invalid");
             }
         }
+
         #endregion
 
         #region Builds - DragAndDrop
@@ -1194,7 +1212,7 @@ namespace POESKillTree.Views
         {
             if (e.LeftButton == MouseButtonState.Pressed)
             {
-                Point position = e.GetPosition(lvSavedBuilds);
+                var position = e.GetPosition(lvSavedBuilds);
 
                 if (Math.Abs(position.X - _dragAndDropStartPoint.X) > SystemParameters.MinimumHorizontalDragDistance ||
                     Math.Abs(position.Y - _dragAndDropStartPoint.Y) > SystemParameters.MinimumVerticalDragDistance)
@@ -1254,13 +1272,13 @@ namespace POESKillTree.Views
             if (e.Data.GetDataPresent("myFormat"))
             {
                 var name = e.Data.GetData("myFormat");
-                ListView listView = lvSavedBuilds;
-                ListViewItem listViewItem = FindAnchestor<ListViewItem>((DependencyObject)e.OriginalSource);
+                var listView = lvSavedBuilds;
+                var listViewItem = FindAnchestor<ListViewItem>((DependencyObject) e.OriginalSource);
 
                 if (listViewItem != null)
                 {
                     var itemToReplace = listView.ItemContainerGenerator.ItemFromContainer(listViewItem);
-                    int index = listView.Items.IndexOf(itemToReplace);
+                    var index = listView.Items.IndexOf(itemToReplace);
 
                     if (index >= 0)
                     {
@@ -1284,7 +1302,7 @@ namespace POESKillTree.Views
             _layer.Add(_adorner);
         }
 
-        void ListViewDragLeave(object sender, DragEventArgs e)
+        private void ListViewDragLeave(object sender, DragEventArgs e)
         {
             if (Equals(e.OriginalSource, lvSavedBuilds))
             {
@@ -1297,7 +1315,7 @@ namespace POESKillTree.Views
             }
         }
 
-        void ListViewDragOver(object sender, DragEventArgs args)
+        private void ListViewDragOver(object sender, DragEventArgs args)
         {
             if (_adorner != null)
             {
@@ -1312,13 +1330,13 @@ namespace POESKillTree.Views
         {
             do
             {
-                if (current is T)
+                var anchestor = current as T;
+                if (anchestor != null)
                 {
-                    return (T)current;
+                    return anchestor;
                 }
                 current = VisualTreeHelper.GetParent(current);
-            }
-            while (current != null);
+            } while (current != null);
             return null;
         }
 
@@ -1326,12 +1344,12 @@ namespace POESKillTree.Views
 
         #region Bottom Bar (Build URL etc)
 
-        private void tbSearch_TextChanged(object sender, TextChangedEventArgs e)
+        private void TbSearchTextChanged(object sender, TextChangedEventArgs e)
         {
             SearchUpdate();
         }
 
-        private void cbRegEx_Click(object sender, RoutedEventArgs e)
+        private void CbRegExClick(object sender, RoutedEventArgs e)
         {
             SearchUpdate();
         }
@@ -1341,34 +1359,34 @@ namespace POESKillTree.Views
             Tree.HighlightNodes(tbSearch.Text, cbRegEx.IsChecked != null && cbRegEx.IsChecked.Value);
         }
 
-        private void tbSkillURL_KeyUp(object sender, KeyEventArgs e)
+        private void TbSkillUrlKeyUp(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
                 LoadBuildFromUrl();
         }
 
-        private void tbSkillURL_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        private void TbSkillUrlMouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             tbSkillURL.SelectAll();
         }
 
-        private void tbSkillURL_TextChanged(object sender, TextChangedEventArgs e)
+        private void TbSkillUrlTextChanged(object sender, TextChangedEventArgs e)
         {
             _undoList.Push(tbSkillURL.Text);
         }
 
-        private void tbSkillURL_Undo_Click(object sender, RoutedEventArgs e)
+        private void TbSkillUrlUndoClick(object sender, RoutedEventArgs e)
         {
-            tbSkillURL_Undo();
+            TbSkillUrlUndo();
         }
 
-        private void tbSkillURL_Undo()
+        private void TbSkillUrlUndo()
         {
             if (_undoList.Count <= 0) return;
             if (_undoList.Peek() == tbSkillURL.Text && _undoList.Count > 1)
             {
                 _undoList.Pop();
-                tbSkillURL_Undo();
+                TbSkillUrlUndo();
             }
             else if (_undoList.Peek() != tbSkillURL.Text)
             {
@@ -1379,18 +1397,18 @@ namespace POESKillTree.Views
             }
         }
 
-        private void tbSkillURL_Redo_Click(object sender, RoutedEventArgs e)
+        private void TbSkillUrlRedoClick(object sender, RoutedEventArgs e)
         {
-            tbSkillURL_Redo();
+            TbSkillUrlRedo();
         }
 
-        private void tbSkillURL_Redo()
+        private void TbSkillUrlRedo()
         {
             if (_redoList.Count <= 0) return;
             if (_redoList.Peek() == tbSkillURL.Text && _redoList.Count > 1)
             {
                 _redoList.Pop();
-                tbSkillURL_Redo();
+                TbSkillUrlRedo();
             }
             else if (_redoList.Peek() != tbSkillURL.Text)
             {
@@ -1400,12 +1418,12 @@ namespace POESKillTree.Views
             }
         }
 
-        private void btnLoadBuild_Click(object sender, RoutedEventArgs e)
+        private void BtnLoadBuildClick(object sender, RoutedEventArgs e)
         {
             LoadBuildFromUrl();
         }
 
-        private void btnPoeUrl_Click(object sender, RoutedEventArgs e)
+        private void BtnPoeUrlClick(object sender, RoutedEventArgs e)
         {
             StartDownloadPoeUrl();
         }
@@ -1438,12 +1456,13 @@ namespace POESKillTree.Views
                 }
                 catch (Exception)
                 {
-                    MessageBox.Show("Failed to create PoEURL", "poeurl error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show("Failed to create PoEURL", "poeurl error", MessageBoxButton.OK,
+                        MessageBoxImage.Error);
                 }
             }
         }
 
-        private void DownloadCompletedPoeUrl(Object sender, DownloadStringCompletedEventArgs e)
+        private static void DownloadCompletedPoeUrl(Object sender, DownloadStringCompletedEventArgs e)
         {
             if (e.Error != null)
             {
@@ -1456,15 +1475,14 @@ namespace POESKillTree.Views
         private static void ShowPoeUrlMessageAndAddToClipboard(string poeurl)
         {
             System.Windows.Forms.Clipboard.SetDataObject(poeurl, true);
-            MessageBox.Show("The URL below has been copied to you clipboard: \n" + poeurl, "poeurl Link",
-                MessageBoxButton.OK);
+            MessageBox.Show("The URL below has been copied to you clipboard: \n" + poeurl, "poeurl Link");
         }
 
         #endregion
 
         #region Theme
 
-        private void mnuSetTheme_Click(object sender, RoutedEventArgs e)
+        private void MnuSetThemeClick(object sender, RoutedEventArgs e)
         {
             var menuItem = sender as MenuItem;
             if (menuItem == null) return;
@@ -1477,11 +1495,11 @@ namespace POESKillTree.Views
             var accent = ThemeManager.Accents.First(x => Equals(x.Name, _persistentData.Options.Accent));
             var theme = ThemeManager.GetAppTheme("Base" + sTheme);
             ThemeManager.ChangeAppStyle(Application.Current, accent, theme);
-            ((MenuItem)NameScope.GetNameScope(this).FindName("mnuViewTheme" + sTheme)).IsChecked = true;
+            ((MenuItem) NameScope.GetNameScope(this).FindName("mnuViewTheme" + sTheme)).IsChecked = true;
             _persistentData.Options.Theme = sTheme;
         }
 
-        private void mnuSetAccent_Click(object sender, RoutedEventArgs e)
+        private void MnuSetAccentClick(object sender, RoutedEventArgs e)
         {
             var menuItem = sender as MenuItem;
             if (menuItem == null) return;
@@ -1494,9 +1512,10 @@ namespace POESKillTree.Views
             var accent = ThemeManager.Accents.First(x => Equals(x.Name, sAccent));
             var theme = ThemeManager.GetAppTheme("Base" + _persistentData.Options.Theme);
             ThemeManager.ChangeAppStyle(Application.Current, accent, theme);
-            ((MenuItem)NameScope.GetNameScope(this).FindName("mnuViewAccent" + sAccent)).IsChecked = true;
+            ((MenuItem) NameScope.GetNameScope(this).FindName("mnuViewAccent" + sAccent)).IsChecked = true;
             _persistentData.Options.Accent = sAccent;
         }
+
         #endregion
 
         #region Change Class - No Reset
@@ -1507,40 +1526,38 @@ namespace POESKillTree.Views
          *         index 0 containing the Class Name
          *         index 1 containing the Class Start String
          **/
-        private string[] getCurrentClass()
+
+        private string[] GetCurrentClass()
         {
-            if (tbSkillURL.Text.IndexOf("AAAAAgAA") != -1)
+            if (tbSkillURL.Text.IndexOf("AAAAAgAA", StringComparison.Ordinal) != -1)
             {
                 return getAnyClass("Scion");
             }
-            else if (tbSkillURL.Text.IndexOf("AAAAAgEA") != -1)
+            if (tbSkillURL.Text.IndexOf("AAAAAgEA", StringComparison.Ordinal) != -1)
             {
                 return getAnyClass("Marauder");
             }
-            else if (tbSkillURL.Text.IndexOf("AAAAAgIA") != -1)
+            if (tbSkillURL.Text.IndexOf("AAAAAgIA", StringComparison.Ordinal) != -1)
             {
                 return getAnyClass("Ranger");
             }
-            else if (tbSkillURL.Text.IndexOf("AAAAAgMA") != -1)
+            if (tbSkillURL.Text.IndexOf("AAAAAgMA", StringComparison.Ordinal) != -1)
             {
                 return getAnyClass("Witch");
             }
-            else if (tbSkillURL.Text.IndexOf("AAAAAgQA") != -1)
+            if (tbSkillURL.Text.IndexOf("AAAAAgQA", StringComparison.Ordinal) != -1)
             {
                 return getAnyClass("Duelist");
             }
-            else if (tbSkillURL.Text.IndexOf("AAAAAgUA") != -1)
+            if (tbSkillURL.Text.IndexOf("AAAAAgUA", StringComparison.Ordinal) != -1)
             {
                 return getAnyClass("Templar");
             }
-            else if (tbSkillURL.Text.IndexOf("AAAAAgYA") != -1)
+            if (tbSkillURL.Text.IndexOf("AAAAAgYA", StringComparison.Ordinal) != -1)
             {
                 return getAnyClass("Shadow");
             }
-            else
-            {
-                return getAnyClass("ERROR");
-            }
+            return getAnyClass("ERROR");
         }
 
         /**
@@ -1549,65 +1566,64 @@ namespace POESKillTree.Views
          *         index 0 containing the Class Name
          *         index 1 containing the Class Start String
          **/
+
         private string[] getAnyClass(string className)
         {
-            string[] array = new string[2];
+            var array = new string[2];
             if (className == "Scion")
             {
                 array[0] = "Scion";
                 array[1] = "AAAAAgAA";
                 return array;
             }
-            else if (className == "Marauder")
+            if (className == "Marauder")
             {
                 array[0] = "Marauder";
                 array[1] = "AAAAAgEA";
                 return array;
             }
-            else if (className == "Ranger")
+            if (className == "Ranger")
             {
                 array[0] = "Ranger";
                 array[1] = "AAAAAgIA";
                 return array;
             }
-            else if (className == "Witch")
+            if (className == "Witch")
             {
                 array[0] = "Witch";
                 array[1] = "AAAAAgMA";
                 return array;
             }
-            else if (className == "Duelist")
+            if (className == "Duelist")
             {
                 array[0] = "Duelist";
                 array[1] = "AAAAAgQA";
                 return array;
             }
-            else if (className == "Templar")
+            if (className == "Templar")
             {
                 array[0] = "Templar";
                 array[1] = "AAAAAgUA";
                 return array;
             }
-            else if (className == "Shadow")
+            if (className == "Shadow")
             {
                 array[0] = "Shadow";
                 array[1] = "AAAAAgYA";
                 return array;
             }
-            else
-            {
-                array[0] = "ERROR";
-                array[1] = "ERROR";
-                return array;
-            }
+            array[0] = "ERROR";
+            array[1] = "ERROR";
+            return array;
         }
-        #endregion  
+
+        #endregion
 
         #region Legacy
 
         /// <summary>
-        /// Import builds from legacy build save file "savedBuilds" to PersistentData.xml.
-        /// Warning: This will remove the "savedBuilds"
+        ///     Import builds from legacy build save file "savedBuilds" to PersistentData.xml.
+        ///     Warning: This will remove the "savedBuilds"
         /// </summary>
         private void ImportLegacySavedBuilds()
         {
@@ -1615,7 +1631,7 @@ namespace POESKillTree.Views
             {
                 if (File.Exists("savedBuilds"))
                 {
-                    var saved_builds = new List<PoEBuild>();
+                    var savedBuilds = new List<PoEBuild>();
                     var builds = File.ReadAllText("savedBuilds").Split('\n');
                     foreach (var b in builds)
                     {
@@ -1625,18 +1641,17 @@ namespace POESKillTree.Views
 
                         if (HasBuildNote(b))
                         {
-
-                            saved_builds.Add(new PoEBuild(b.Split(';')[0].Split('|')[0], poeClass, pointsUsed,
+                            savedBuilds.Add(new PoEBuild(b.Split(';')[0].Split('|')[0], poeClass, pointsUsed,
                                 b.Split(';')[1].Split('|')[0], b.Split(';')[1].Split('|')[1]));
                         }
                         else
                         {
-                            saved_builds.Add(new PoEBuild(b.Split(';')[0].Split('|')[0], poeClass, pointsUsed,
+                            savedBuilds.Add(new PoEBuild(b.Split(';')[0].Split('|')[0], poeClass, pointsUsed,
                                 b.Split(';')[1], ""));
                         }
                     }
                     lvSavedBuilds.Items.Clear();
-                    foreach (var lvi in saved_builds)
+                    foreach (var lvi in savedBuilds)
                     {
                         lvSavedBuilds.Items.Add(lvi);
                     }
@@ -1644,7 +1659,7 @@ namespace POESKillTree.Views
                     SaveBuildsToFile();
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 MessageBox.Show("Unable to load the saved builds.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -1657,10 +1672,5 @@ namespace POESKillTree.Views
         }
 
         #endregion
-
-        private void image1_LostFocus(object sender, MouseEventArgs e)
-        {
-            _sToolTip.IsOpen = false;
-        }
     }
 }

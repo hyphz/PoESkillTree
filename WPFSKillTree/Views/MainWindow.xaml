@@ -6,9 +6,9 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:POESKillTree.Controls"
         mc:Ignorable="d" x:Class="POESKillTree.Views.MainWindow"
-        Title="Path of Exile - Passive Skill Tree Planner" Height="667" Width="1200" SizeChanged="Window_SizeChanged" 
-        Closing="Window_Closing" Icon="/POESKillTree;component/logo.ico" Loaded="Window_Loaded" WindowStartupLocation="CenterScreen"
-        PreviewKeyDown="Window_PreviewKeyDown"
+        Title="Path of Exile - Passive Skill Tree Planner" Height="667" Width="1200" SizeChanged="WindowSizeChanged" 
+        Closing="WindowClosing" Icon="/POESKillTree;component/logo.ico" Loaded="WindowLoaded" WindowStartupLocation="CenterScreen"
+        PreviewKeyDown="WindowPreviewKeyDown"
         TextOptions.TextFormattingMode="Display">
     <Window.Resources>
         <Style x:Key="ContainerStyleIsExpanded" TargetType="{x:Type GroupItem}">
@@ -147,34 +147,34 @@
         <!-- grid row 0 - upper part-->
         <Menu IsMainMenu="True" x:Name="menu1" Grid.Row="0" Margin="0,0,0,2">
             <MenuItem Header="_File ">
-                <MenuItem Header="_Save As" InputGestureText="Ctrl+S" Click="btnSaveNewBuild_Click">
+                <MenuItem Header="_Save As" InputGestureText="Ctrl+S" Click="BtnSaveNewBuildClick">
                     <MenuItem.Icon>
                         <ContentControl Template="{StaticResource SaveIcon}" />
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="_Exit" Click="Menu_Exit">
+                <MenuItem Header="_Exit" Click="MenuExit">
                     <MenuItem.Icon>
                         <ContentControl Template="{StaticResource ExitIcon}" />
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
             <MenuItem Header="_Edit ">
-                <MenuItem x:Name="mnuUndo" Header="_Undo" InputGestureText="Ctrl+Z" Click="tbSkillURL_Undo_Click">
+                <MenuItem x:Name="mnuUndo" Header="_Undo" InputGestureText="Ctrl+Z" Click="TbSkillUrlUndoClick">
                     <MenuItem.Icon>
                         <ContentControl Template="{StaticResource UndoIcon}" />
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem x:Name="mnuRedo" Header="_Redo" InputGestureText="Ctrl+Y" Click="tbSkillURL_Redo_Click">
+                <MenuItem x:Name="mnuRedo" Header="_Redo" InputGestureText="Ctrl+Y" Click="TbSkillUrlRedoClick">
                     <MenuItem.Icon>
                         <ContentControl Template="{StaticResource RedoIcon}" />
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="_Reset" InputGestureText="Ctrl+R" Click="btnReset_Click">
+                <MenuItem Header="_Reset" InputGestureText="Ctrl+R" Click="BtnResetClick">
                     <MenuItem.Icon>
                         <ContentControl Template="{StaticResource ResetIcon}" />
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem x:Name="mnuClearItems" Header="_Clear Items" Click="Menu_ClearItems" IsEnabled="False">
+                <MenuItem x:Name="mnuClearItems" Header="_Clear Items" Click="MenuClearItems" IsEnabled="False">
                     <MenuItem.Icon>
                         <ContentControl Template="{StaticResource ClearIcon}" />
                     </MenuItem.Icon>
@@ -185,63 +185,63 @@
                     <MenuItem.Icon>
                         <ContentControl Template="{StaticResource ThemeIcon}" />
                     </MenuItem.Icon>
-                    <MenuItem x:Name="mnuViewThemeLight" local:MenuItemExtensions.GroupName="ThemeGroup" IsCheckable="True" Header="Light" Click="mnuSetTheme_Click" />
-                    <MenuItem x:Name="mnuViewThemeDark" local:MenuItemExtensions.GroupName="ThemeGroup" IsCheckable="True" Header="Dark" Click="mnuSetTheme_Click"/>
+                    <MenuItem x:Name="mnuViewThemeLight" local:MenuItemExtensions.GroupName="ThemeGroup" IsCheckable="True" Header="Light" Click="MnuSetThemeClick" />
+                    <MenuItem x:Name="mnuViewThemeDark" local:MenuItemExtensions.GroupName="ThemeGroup" IsCheckable="True" Header="Dark" Click="MnuSetThemeClick"/>
                 </MenuItem>
                 <MenuItem Header="_Accent ">
                     <MenuItem.Icon>
                         <ContentControl Template="{StaticResource ThemeIcon}" />
                     </MenuItem.Icon>
-                    <MenuItem x:Name="mnuViewAccentAmber" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Amber" Click="mnuSetAccent_Click" />
-                    <MenuItem x:Name="mnuViewAccentBlue" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Blue" Click="mnuSetAccent_Click" />
-                    <MenuItem x:Name="mnuViewAccentBrown" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Brown" Click="mnuSetAccent_Click" />
-                    <MenuItem x:Name="mnuViewAccentCobalt" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Cobalt" Click="mnuSetAccent_Click" />
-                    <MenuItem x:Name="mnuViewAccentCrimson" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Crimson" Click="mnuSetAccent_Click" />
-                    <MenuItem x:Name="mnuViewAccentCyan" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Cyan" Click="mnuSetAccent_Click" />
-                    <MenuItem x:Name="mnuViewAccentEmerald" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Emerald" Click="mnuSetAccent_Click" />
-                    <MenuItem x:Name="mnuViewAccentGreen" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Green" Click="mnuSetAccent_Click" />
-                    <MenuItem x:Name="mnuViewAccentIndigo" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Indigo" Click="mnuSetAccent_Click" />
-                    <MenuItem x:Name="mnuViewAccentLime" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Lime" Click="mnuSetAccent_Click" />
-                    <MenuItem x:Name="mnuViewAccentMagenta" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Magenta" Click="mnuSetAccent_Click"/>
-                    <MenuItem x:Name="mnuViewAccentMauve" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Mauve" Click="mnuSetAccent_Click" />
-                    <MenuItem x:Name="mnuViewAccentOlive" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Olive" Click="mnuSetAccent_Click" />
-                    <MenuItem x:Name="mnuViewAccentOrange" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Orange" Click="mnuSetAccent_Click" />
-                    <MenuItem x:Name="mnuViewAccentPink" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Pink" Click="mnuSetAccent_Click"/>
-                    <MenuItem x:Name="mnuViewAccentPurple" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Purple" Click="mnuSetAccent_Click" />
-                    <MenuItem x:Name="mnuViewAccentRed" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Red" Click="mnuSetAccent_Click"/>
-                    <MenuItem x:Name="mnuViewAccentSienna" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Sienna" Click="mnuSetAccent_Click" />
-                    <MenuItem x:Name="mnuViewAccentSteel" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Steel" Click="mnuSetAccent_Click"/>
-                    <MenuItem x:Name="mnuViewAccentTaupe" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Taupe" Click="mnuSetAccent_Click" />
-                    <MenuItem x:Name="mnuViewAccentTeal" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Teal" Click="mnuSetAccent_Click" />
-                    <MenuItem x:Name="mnuViewAccentViolet" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Violet" Click="mnuSetAccent_Click"/>
-                    <MenuItem x:Name="mnuViewAccentYellow" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Yellow" Click="mnuSetAccent_Click" />
+                    <MenuItem x:Name="mnuViewAccentAmber" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Amber" Click="MnuSetAccentClick" />
+                    <MenuItem x:Name="mnuViewAccentBlue" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Blue" Click="MnuSetAccentClick" />
+                    <MenuItem x:Name="mnuViewAccentBrown" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Brown" Click="MnuSetAccentClick" />
+                    <MenuItem x:Name="mnuViewAccentCobalt" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Cobalt" Click="MnuSetAccentClick" />
+                    <MenuItem x:Name="mnuViewAccentCrimson" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Crimson" Click="MnuSetAccentClick" />
+                    <MenuItem x:Name="mnuViewAccentCyan" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Cyan" Click="MnuSetAccentClick" />
+                    <MenuItem x:Name="mnuViewAccentEmerald" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Emerald" Click="MnuSetAccentClick" />
+                    <MenuItem x:Name="mnuViewAccentGreen" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Green" Click="MnuSetAccentClick" />
+                    <MenuItem x:Name="mnuViewAccentIndigo" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Indigo" Click="MnuSetAccentClick" />
+                    <MenuItem x:Name="mnuViewAccentLime" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Lime" Click="MnuSetAccentClick" />
+                    <MenuItem x:Name="mnuViewAccentMagenta" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Magenta" Click="MnuSetAccentClick"/>
+                    <MenuItem x:Name="mnuViewAccentMauve" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Mauve" Click="MnuSetAccentClick" />
+                    <MenuItem x:Name="mnuViewAccentOlive" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Olive" Click="MnuSetAccentClick" />
+                    <MenuItem x:Name="mnuViewAccentOrange" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Orange" Click="MnuSetAccentClick" />
+                    <MenuItem x:Name="mnuViewAccentPink" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Pink" Click="MnuSetAccentClick"/>
+                    <MenuItem x:Name="mnuViewAccentPurple" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Purple" Click="MnuSetAccentClick" />
+                    <MenuItem x:Name="mnuViewAccentRed" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Red" Click="MnuSetAccentClick"/>
+                    <MenuItem x:Name="mnuViewAccentSienna" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Sienna" Click="MnuSetAccentClick" />
+                    <MenuItem x:Name="mnuViewAccentSteel" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Steel" Click="MnuSetAccentClick"/>
+                    <MenuItem x:Name="mnuViewAccentTaupe" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Taupe" Click="MnuSetAccentClick" />
+                    <MenuItem x:Name="mnuViewAccentTeal" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Teal" Click="MnuSetAccentClick" />
+                    <MenuItem x:Name="mnuViewAccentViolet" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Violet" Click="MnuSetAccentClick"/>
+                    <MenuItem x:Name="mnuViewAccentYellow" local:MenuItemExtensions.GroupName="AccentGroup" IsCheckable="True" Header="Yellow" Click="MnuSetAccentClick" />
                 </MenuItem>
                 <Separator />
-                <MenuItem x:Name="mnuViewBuilds" Header="_Builds" InputGestureText="Ctrl+B" IsCheckable="true" IsChecked="False" Click="ToggleBuilds_Click"/>
-                <MenuItem x:Name="mnuViewAttributes" Header="_Attributes" IsCheckable="true" IsChecked="False" InputGestureText="Ctrl+Q" Click="ToggleAttributes_Click"/>
+                <MenuItem x:Name="mnuViewBuilds" Header="_Builds" InputGestureText="Ctrl+B" IsCheckable="true" IsChecked="False" Click="ToggleBuildsClick"/>
+                <MenuItem x:Name="mnuViewAttributes" Header="_Attributes" IsCheckable="true" IsChecked="False" InputGestureText="Ctrl+Q" Click="ToggleAttributesClick"/>
             </MenuItem>
             <MenuItem Header="_Tools ">
-                <MenuItem Header="_ScreenShot of Skilled Nodes" Click="Menu_ScreenShot">
+                <MenuItem Header="_ScreenShot of Skilled Nodes" Click="MenuScreenShot">
                     <MenuItem.Icon>
                         <ContentControl Template="{StaticResource ScreenShotIcon}" />
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="_Download/Import Items" Click="Menu_ImportItems">
+                <MenuItem Header="_Download/Import Items" Click="MenuImportItems">
                     <MenuItem.Icon>
                         <ContentControl Template="{StaticResource DownloadIcon}" />
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="_Skill highlighted nodes" Click="Menu_SkillHighlightedNodes">
+                <MenuItem Header="_Skill highlighted nodes" Click="MenuSkillHighlightedNodes">
                     <MenuItem.Icon>
                         <ContentControl Template="{StaticResource SkillIcon}" />
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="_Copy Passive Attributes to Clipboard" Click="Menu_CopyStats">
+                <MenuItem Header="_Copy Passive Attributes to Clipboard" Click="MenuCopyStats">
                     <MenuItem.Icon>
                         <ContentControl Template="{StaticResource CopyToClipboardIcon}" />
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="_Redownload Tree Assets" Click="Menu_RedownloadTreeAssets">
+                <MenuItem Header="_Redownload Tree Assets" Click="MenuRedownloadTreeAssets">
                     <MenuItem.Icon>
                         <ContentControl Template="{StaticResource RedownloadIcon}" />
                     </MenuItem.Icon>
@@ -252,25 +252,25 @@
                     <MenuItem.Icon>
                         <ContentControl Template="{StaticResource GlobeIcon}" />
                     </MenuItem.Icon>
-                    <MenuItem Header="_Path of Exile Website" Click="Menu_OpenPoEWebsite"/>
-                    <MenuItem Header="_Path of Exile Wiki" Click="Menu_OpenWiki"/>
+                    <MenuItem Header="_Path of Exile Website" Click="MenuOpenPoEWebsite"/>
+                    <MenuItem Header="_Path of Exile Wiki" Click="MenuOpenWiki"/>
                 </MenuItem>
-                <MenuItem Header="_View Help" Click="Menu_OpenHelp">
+                <MenuItem Header="_View Help" Click="MenuOpenHelp">
                     <MenuItem.Icon>
                         <ContentControl Template="{StaticResource HelpIcon}" />
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="_Hotkeys" Click="Menu_OpenHotkeys">
+                <MenuItem Header="_Hotkeys" Click="MenuOpenHotkeys">
                     <MenuItem.Icon>
                         <ContentControl Template="{StaticResource KeyboardIcon}" />
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="_About" Click="Menu_OpenAbout">
+                <MenuItem Header="_About" Click="MenuOpenAbout">
                     <MenuItem.Icon>
                         <ContentControl Template="{StaticResource AboutIcon}" />
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="_Check for Updates" Click="Menu_CheckForUpdates">
+                <MenuItem Header="_Check for Updates" Click="MenuCheckForUpdates">
                     <MenuItem.Icon>
                         <ContentControl Template="{StaticResource UpdateIcon}" />
                     </MenuItem.Icon>
@@ -281,8 +281,8 @@
         <!-- grid row 1 - attirbutes, buttons, saved builds-->
         <Grid x:Name="BtnGrid" Margin="0,0,0,0" HorizontalAlignment="Center" VerticalAlignment="Top" Grid.Row="1" Width="314" Panel.ZIndex="99" >
             <Label Content="Level:" Height="28" HorizontalAlignment="Left" Margin="0" x:Name="lblLevel" VerticalAlignment="Top" VerticalContentAlignment="Center" />
-            <TextBox HorizontalAlignment="Left" Margin="40,0,0,0" x:Name="tbLevel" VerticalAlignment="Top" Width="32" TextChanged="tbLevel_TextChanged" MaxLength="3" VerticalContentAlignment="Center" />
-            <ComboBox Height="26" HorizontalAlignment="Left" Margin="80,0,0,0" x:Name="cbCharType" VerticalAlignment="Top" Width="100" SelectionChanged="cbCharType_SelectionChanged" VerticalContentAlignment="Center">
+            <TextBox HorizontalAlignment="Left" Margin="40,0,0,0" x:Name="tbLevel" VerticalAlignment="Top" Width="32" TextChanged="TbLevelTextChanged" MaxLength="3" VerticalContentAlignment="Center" />
+            <ComboBox Height="26" HorizontalAlignment="Left" Margin="80,0,0,0" x:Name="cbCharType" VerticalAlignment="Top" Width="100" SelectionChanged="CbCharTypeSelectionChanged" VerticalContentAlignment="Center">
                 <ComboBoxItem Content="Scion" Name="Scion"/>
                 <ComboBoxItem Content="Marauder" Name="Marauder"/>
                 <ComboBoxItem Content="Ranger" Name="Ranger"/>
@@ -294,28 +294,28 @@
             <Label Content="Used:" Height="26" HorizontalAlignment="Left" Margin="182,0,0,0" x:Name="lblUsedPoints" VerticalAlignment="Top" VerticalContentAlignment="Center"/>
             <TextBox Height="26" Margin="218,0,0,0" x:Name="tbUsedPoints" VerticalAlignment="Top" IsReadOnly="True" VerticalContentAlignment="Center" HorizontalAlignment="Left" Width="32"/>
 
-            <Button Content="Reset" Height="26" HorizontalAlignment="Right" x:Name="btnReset" VerticalAlignment="Top" Width="40" Click="btnReset_Click" VerticalContentAlignment="Center" Margin="0,0,0,0"/>
+            <Button Content="Reset" Height="26" HorizontalAlignment="Right" x:Name="btnReset" VerticalAlignment="Top" Width="40" Click="BtnResetClick" VerticalContentAlignment="Center" Margin="0,0,0,0"/>
         </Grid>
         <!-- grid row 1 - center part, tree and shit -->
         <Grid Grid.Row="2" Margin="0,0,0,0">
-            <local:ZoomBorder IsManipulationEnabled="True" x:Name="zbSkillTreeBackground" ClipToBounds="True" MouseMove="zbSkillTreeBackground_MouseMove" Click="zbSkillTreeBackground_Click" Background="Black" MouseLeave="zbSkillTreeBackground_MouseLeave" Margin="0,0,0,0" Focusable="True" PreviewMouseRightButtonDown="zbSkillTreeBackground_PreviewMouseRightButtonDown">
+            <local:ZoomBorder IsManipulationEnabled="True" x:Name="zbSkillTreeBackground" ClipToBounds="True" MouseMove="ZbSkillTreeBackgroundMouseMove" Click="ZbSkillTreeBackgroundClick" Background="Black" MouseLeave="ZbSkillTreeBackgroundMouseLeave" Margin="0,0,0,0" Focusable="True" PreviewMouseRightButtonDown="ZbSkillTreeBackgroundPreviewMouseRightButtonDown">
                 <Rectangle Height="500" Width="597" IsManipulationEnabled="True" x:Name="recSkillTree" Stretch="Fill"  ClipToBounds="false" Margin="0,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Center"/>
             </local:ZoomBorder>
 
 
-            <Expander x:Name="expSavedBuilds" HorizontalAlignment="Right" ExpandDirection="Down" Margin="0,-30,0,0" Background="{DynamicResource WhiteColorBrush}" FlowDirection="RightToLeft" Expanded="expSavedBuilds_Expanded" Collapsed="expSavedBuilds_Collapsed" Padding="0" BorderBrush="{DynamicResource WhiteColorBrush}">
+            <Expander x:Name="expSavedBuilds" HorizontalAlignment="Right" ExpandDirection="Down" Margin="0,-30,0,0" Background="{DynamicResource WhiteColorBrush}" FlowDirection="RightToLeft" Expanded="ExpSavedBuildsExpanded" Collapsed="ExpSavedBuildsCollapsed" Padding="0" BorderBrush="{DynamicResource WhiteColorBrush}">
                 <Expander.Header>
                     <TextBlock Margin="6,0" TextAlignment="Left" TextBlock.FontSize="16">Saved builds</TextBlock>
                 </Expander.Header>
 
                 <Grid x:Name="gridBuildManager" HorizontalAlignment="Left"  FlowDirection="LeftToRight" Background="{DynamicResource WhiteColorBrush}">
                     <ListView x:Name="lvSavedBuilds" Margin="0,0,0,31" HorizontalAlignment="Left" Width="255"
-                              ForceCursor="True" KeyUp="lvSavedBuilds_KeyUp" IsSynchronizedWithCurrentItem="True" BorderThickness="0"
+                              ForceCursor="True" KeyUp="LvSavedBuildsKeyUp" IsSynchronizedWithCurrentItem="True" BorderThickness="0"
                               AllowDrop="True" DragEnter="ListViewDragEnter" Drop="ListViewDrop" PreviewMouseMove="ListViewPreviewMouseMove" PreviewMouseLeftButtonDown="ListViewMouseLeftButtonDown"
-                              MouseDoubleClick="lvi_MouseDoubleClick">
+                              MouseDoubleClick="LviMouseDoubleClick">
                         <ListView.ItemTemplate>
                             <DataTemplate>
-                                <Grid Margin="1" MouseRightButtonUp="lvi_MouseRightButtonUp" MouseEnter="lvi_MouseEnter" MouseLeave="lvi_MouseLeave">
+                                <Grid Margin="1" MouseRightButtonUp="LviMouseRightButtonUp" MouseEnter="LviMouseEnter" MouseLeave="LviMouseLeave">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
@@ -331,13 +331,13 @@
                             </DataTemplate>
                         </ListView.ItemTemplate>
                     </ListView>
-                    <Button x:Name="btnSaveNewBuild" Content="Save new" HorizontalAlignment="Left" Margin="0,0,0,0" VerticalAlignment="Bottom" Width="80" Click="btnSaveNewBuild_Click"/>
-                    <Button x:Name="btnOverwriteBuild" Content="Overwrite" Margin="88,0,0,0" VerticalAlignment="Bottom" Click="btnOverwriteBuild_Click" HorizontalAlignment="Left" Width="84"/>
-                    <Button x:Name="btnDelete" Content="Delete" Margin="0,0,0,0" VerticalAlignment="Bottom" Click="btnDelete_Click" HorizontalAlignment="Right" Width="60"/>
+                    <Button x:Name="btnSaveNewBuild" Content="Save new" HorizontalAlignment="Left" Margin="0,0,0,0" VerticalAlignment="Bottom" Width="80" Click="BtnSaveNewBuildClick"/>
+                    <Button x:Name="btnOverwriteBuild" Content="Overwrite" Margin="88,0,0,0" VerticalAlignment="Bottom" Click="BtnOverwriteBuildClick" HorizontalAlignment="Left" Width="84"/>
+                    <Button x:Name="btnDelete" Content="Delete" Margin="0,0,0,0" VerticalAlignment="Bottom" Click="BtnDeleteClick" HorizontalAlignment="Right" Width="60"/>
                 </Grid>
             </Expander>
 
-            <Expander Margin="0,-30,0,0" HorizontalAlignment="Left" Background="{DynamicResource WhiteColorBrush}" ExpandDirection="Down" x:Name="expAttributes" Collapsed="expAttributes_Collapsed" Expanded="expAttributes_Expanded" Padding="0" BorderBrush="{DynamicResource WhiteColorBrush}" MouseLeave="expAttributes_MouseLeave">
+            <Expander Margin="0,-30,0,0" HorizontalAlignment="Left" Background="{DynamicResource WhiteColorBrush}" ExpandDirection="Down" x:Name="expAttributes" Collapsed="ExpAttributesCollapsed" Expanded="ExpAttributesExpanded" Padding="0" BorderBrush="{DynamicResource WhiteColorBrush}" MouseLeave="ExpAttributesMouseLeave">
                 <Expander.Header>
                     <TextBlock Margin="6,0" TextAlignment="Left" TextBlock.FontSize="16">Attributes</TextBlock>
                 </Expander.Header>
@@ -348,7 +348,7 @@
                                 <ListBox ScrollViewer.CanContentScroll="False" Height="{Binding ActualHeight, RelativeSource={RelativeSource FindAncestor, AncestorLevel=1, AncestorType={x:Type Grid}}}" HorizontalAlignment="Center" x:Name="listBox1" VerticalAlignment="Top" Width="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorLevel=1, AncestorType={x:Type Grid}}}" ItemsSource="{Binding}" ScrollViewer.HorizontalScrollBarVisibility="Hidden" >
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
-                                            <TextBlock Text="{Binding Text}" TextWrapping="Wrap" MouseRightButtonUp="TextBlock_MouseRightButtonUp"/>
+                                            <TextBlock Text="{Binding Text}" TextWrapping="Wrap" MouseRightButtonUp="TextBlockMouseRightButtonUp"/>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                     <ListBox.GroupStyle>
@@ -391,7 +391,7 @@
                 </Grid>
             </Expander>
 
-            <Expander Margin="108,-30,0,0" HorizontalAlignment="Left" Background="{DynamicResource WhiteColorBrush}" ExpandDirection="Down" x:Name="expSheet" Expanded="expSheet_Expanded" Padding="0" BorderBrush="{DynamicResource WhiteColorBrush}">
+            <Expander Margin="108,-30,0,0" HorizontalAlignment="Left" Background="{DynamicResource WhiteColorBrush}" ExpandDirection="Down" x:Name="expSheet" Expanded="ExpSheetExpanded" Padding="0" BorderBrush="{DynamicResource WhiteColorBrush}">
                 <Expander.Header>
                     <TextBlock Margin="6,0" TextAlignment="Left" TextBlock.FontSize="16">Character Sheet</TextBlock>
                 </Expander.Header>
@@ -435,15 +435,15 @@
         <TextBox Height="24" HorizontalAlignment="Right" x:Name="textBox2" VerticalAlignment="Bottom" Width="120" Grid.Row="2" Margin="0,0,0,36" Visibility="Hidden"/>
 
         <Label Content="Search:" Height="28" HorizontalAlignment="Left" Margin="1,1,1,1" x:Name="label3" VerticalAlignment="Bottom" VerticalContentAlignment="Center" Width="50" Grid.Row="3" />
-        <TextBox Height="24" HorizontalAlignment="Left" Margin="60,2,2,2" x:Name="tbSearch" VerticalAlignment="Bottom" Width="284" TextChanged="tbSearch_TextChanged" Grid.Row="3" />
-        <CheckBox Content="RegEx" Height="28" HorizontalAlignment="Left" Margin="352,1,1,1" x:Name="cbRegEx" VerticalAlignment="Bottom" Grid.Row="3" VerticalContentAlignment="Center" Click="cbRegEx_Click"/>
+        <TextBox Height="24" HorizontalAlignment="Left" Margin="60,2,2,2" x:Name="tbSearch" VerticalAlignment="Bottom" Width="284" TextChanged="TbSearchTextChanged" Grid.Row="3" />
+        <CheckBox Content="RegEx" Height="28" HorizontalAlignment="Left" Margin="352,1,1,1" x:Name="cbRegEx" VerticalAlignment="Bottom" Grid.Row="3" VerticalContentAlignment="Center" Click="CbRegExClick"/>
 
         <Label x:Name="lblSkillURL" Content="Build link:" HorizontalAlignment="Left" Margin="415,0,0,1" Height="28" VerticalAlignment="Bottom" Grid.Row="3" VerticalContentAlignment="Center"/>
         <TextBox Height="24" Margin="482,0,166,2" x:Name="tbSkillURL" VerticalAlignment="Bottom" Text="http://www.pathofexile.com/passive-skill-tree/AAAAAgMA"  
-                     VerticalContentAlignment="Center" MouseDoubleClick="tbSkillURL_MouseDoubleClick" TextChanged="tbSkillURL_TextChanged" KeyUp="tbSkillURL_KeyUp" Grid.Row="3" />
+                     VerticalContentAlignment="Center" MouseDoubleClick="TbSkillUrlMouseDoubleClick" TextChanged="TbSkillUrlTextChanged" KeyUp="TbSkillUrlKeyUp" Grid.Row="3" />
 
-        <Button Content="Load build" Height="24" HorizontalAlignment="Right" x:Name="btnLoadBuild" VerticalAlignment="Bottom" Width="75" Click="btnLoadBuild_Click" Margin="2,2,85,2" Grid.Row="3"/>
-        <Button Content="Poeurl it!" Height="24" HorizontalAlignment="Right" x:Name="btnPoeUrl" VerticalAlignment="Bottom" Width="75" Click="btnPoeUrl_Click" Margin="2" Grid.Row="3"/>
+        <Button Content="Load build" Height="24" HorizontalAlignment="Right" x:Name="btnLoadBuild" VerticalAlignment="Bottom" Width="75" Click="BtnLoadBuildClick" Margin="2,2,85,2" Grid.Row="3"/>
+        <Button Content="Poeurl it!" Height="24" HorizontalAlignment="Right" x:Name="btnPoeUrl" VerticalAlignment="Bottom" Width="75" Click="BtnPoeUrlClick" Margin="2" Grid.Row="3"/>
 
     </Grid>
 </controls:MetroWindow>

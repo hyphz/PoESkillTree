@@ -806,7 +806,7 @@ namespace POESKillTree.SkillTreeFiles
         {
             var pen2 = new Pen(Brushes.Yellow, 15f);
 
-            using (DrawingContext dc = picActiveLinks.RenderOpen())
+            using (DrawingContext dc = PicActiveLinks.RenderOpen())
             {
                 foreach (ushort n1 in SkilledNodes)
                 {

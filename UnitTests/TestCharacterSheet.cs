@@ -15,32 +15,22 @@ namespace UnitTests
     [TestClass]
     public class TestCharacterSheet
     {
-        private TestContext TestContextInstance;
-        public TestContext TestContext
-        {
-            get { return TestContextInstance; }
-            set { TestContextInstance = value; }
-        }
+        public TestContext TestContext { get; set; }
 
-        static SkillTree Tree;
+        static SkillTree _tree;
 
         [ClassInitialize]
         public static void Initalize(TestContext testContext)
         {
             if (ItemDB.IsEmpty())
                 ItemDB.Load(@"..\..\..\WPFSkillTree\Items.xml", true);
-            Tree = SkillTree.CreateSkillTree(() => { Debug.WriteLine("Download started"); }, (double dummy1, double dummy2) => { }, () => { Debug.WriteLine("Download finished"); });
+            _tree = SkillTree.CreateSkillTree(() => { Debug.WriteLine("Download started"); }, (dummy1, dummy2) => { }, () => { Debug.WriteLine("Download finished"); });
         }
 
         readonly Regex _backreplace = new Regex("#");
         string InsertNumbersInAttributes(KeyValuePair<string, List<float>> attrib)
         {
-            string s = attrib.Key;
-            foreach (float f in attrib.Value)
-            {
-                s = _backreplace.Replace(s, f.ToString(CultureInfo.InvariantCulture.NumberFormat), 1);
-            }
-            return s;
+            return attrib.Value.Aggregate(attrib.Key, (current, f) => _backreplace.Replace(current, f.ToString(CultureInfo.InvariantCulture.NumberFormat), 1));
         }
 
         [DataSource("Microsoft.VisualStudio.TestTools.DataSource.XML", @"..\..\TestBuilds\Builds.xml", "TestBuild", DataAccessMethod.Sequential)]
@@ -48,9 +38,9 @@ namespace UnitTests
         public void TestBuild()
         {
             // Read build entry.
-            string treeURL = TestContext.DataRow["TreeURL"].ToString();
+            string treeUrl = TestContext.DataRow["TreeURL"].ToString();
             int level = Convert.ToInt32(TestContext.DataRow["Level"]);
-            string buildFile = @"..\..\TestBuilds\" + TestContext.DataRow["BuildFile"].ToString();
+            string buildFile = @"..\..\TestBuilds\" + TestContext.DataRow["BuildFile"];
             List<string> expectDefense = new List<string>();
             List<string> expectOffense = new List<string>();
             if (TestContext.DataRow.Table.Columns.Contains("ExpectDefence"))
@@ -82,12 +72,12 @@ namespace UnitTests
             }
 
             // Initialize structures.
-            Tree.LoadFromURL(treeURL);
-            Tree.Level = level;
+            _tree.LoadFromURL(treeUrl);
+            _tree.Level = level;
 
             string itemData = File.ReadAllText(buildFile);
             ItemAttributes itemAttributes = new ItemAttributes(itemData);
-            Compute.Initialize(Tree, itemAttributes);
+            Compute.Initialize(_tree, itemAttributes);
 
             // Compare defense properties.
             Dictionary<string, List<string>> defense = new Dictionary<string, List<string>>();
@@ -95,9 +85,7 @@ namespace UnitTests
             {
                 foreach (ListGroup grp in Compute.Defense())
                 {
-                    List<string> props = new List<string>();
-                    foreach (string item in grp.Properties.Select(InsertNumbersInAttributes))
-                        props.Add(item);
+                    List<string> props = grp.Properties.Select(InsertNumbersInAttributes).ToList();
                     defense.Add(grp.Name, props);
                 }
 
@@ -106,12 +94,12 @@ namespace UnitTests
                 {
                     if (entry.Contains(':')) // Property: Value
                     {
-                        Assert.IsNotNull(group, "Missing defence group [" + TestContext.DataRow["BuildFile"].ToString() + "]");
-                        Assert.IsTrue(group.Contains(entry), "Wrong " + entry + " [" + TestContext.DataRow["BuildFile"].ToString() + "]");
+                        Assert.IsNotNull(group, "Missing defence group [" + TestContext.DataRow["BuildFile"] + "]");
+                        Assert.IsTrue(group.Contains(entry), "Wrong " + entry + " [" + TestContext.DataRow["BuildFile"] + "]");
                     }
                     else // Group
                     {
-                        Assert.IsTrue(defense.ContainsKey(entry), "No such defence group: " + entry + " [" + TestContext.DataRow["BuildFile"].ToString() + "]");
+                        Assert.IsTrue(defense.ContainsKey(entry), "No such defence group: " + entry + " [" + TestContext.DataRow["BuildFile"] + "]");
                         group = defense[entry];
                     }
                 }
@@ -123,9 +111,7 @@ namespace UnitTests
             {
                 foreach (ListGroup grp in Compute.Offense())
                 {
-                    List<string> props = new List<string>();
-                    foreach (string item in grp.Properties.Select(InsertNumbersInAttributes))
-                        props.Add(item);
+                    List<string> props = grp.Properties.Select(InsertNumbersInAttributes).ToList();
                     offense.Add(grp.Name, props);
                 }
 
@@ -134,12 +120,12 @@ namespace UnitTests
                 {
                     if (entry.Contains(':')) // Property: Value
                     {
-                        Assert.IsNotNull(group, "Missing offence group [" + TestContext.DataRow["BuildFile"].ToString() + "]");
-                        Assert.IsTrue(group.Contains(entry), "Wrong " + entry + " [" + TestContext.DataRow["BuildFile"].ToString() + "]");
+                        Assert.IsNotNull(group, "Missing offence group [" + TestContext.DataRow["BuildFile"] + "]");
+                        Assert.IsTrue(group.Contains(entry), "Wrong " + entry + " [" + TestContext.DataRow["BuildFile"] + "]");
                     }
                     else // Group
                     {
-                        Assert.IsTrue(offense.ContainsKey(entry), "No such offence group: " + entry + " [" + TestContext.DataRow["BuildFile"].ToString() + "]");
+                        Assert.IsTrue(offense.ContainsKey(entry), "No such offence group: " + entry + " [" + TestContext.DataRow["BuildFile"] + "]");
                         group = offense[entry];
                     }
                 }

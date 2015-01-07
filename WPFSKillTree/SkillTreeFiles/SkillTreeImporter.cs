@@ -63,7 +63,6 @@ namespace POESKillTree.SkillTreeFiles
                 dataStream.Close();
 
                 WebResponse resp = req.GetResponse();
-                string status = (resp as HttpWebResponse).StatusDescription;
                 buildFile = new StreamReader(resp.GetResponseStream()).ReadToEnd();
             }
 
@@ -135,8 +134,7 @@ namespace POESKillTree.SkillTreeFiles
             //respose
             string[] buildResp = buildFile.Replace("[", "").Replace("]", "").Split(',');
             int character = int.Parse(buildResp[0]);
-            var skilled = new List<int>();
-
+            
             tree.Chartype = character;
             tree.SkilledNodes.Clear();
             SkillNode startnode =
@@ -147,23 +145,27 @@ namespace POESKillTree.SkillTreeFiles
             {
                 if (!positions[int.Parse(buildResp[i])].HasValue) Debugger.Break();
 
-                Vector2D poezonePos = (positions[int.Parse(buildResp[i])].Value - new Vector2D(minx, miny))*
-                                      new Vector2D(1/(maxx - minx), 1/(maxy - miny));
-                double minDis = 2;
-                var minNode = new KeyValuePair<ushort, SkillNode>();
-                foreach (var node in tree.Skillnodes)
+                var vector2D = positions[int.Parse(buildResp[i])];
+                if (vector2D != null)
                 {
-                    Vector2D nodePos = (node.Value.Position - new Vector2D(nminx, nminy))*
-                                       new Vector2D(1/(nmaxx - nminx), 1/(nmaxy - nminy));
-                    double dis = (nodePos - poezonePos).Length;
-                    if (dis < minDis)
+                    Vector2D poezonePos = (vector2D.Value - new Vector2D(minx, miny))*
+                                          new Vector2D(1/(maxx - minx), 1/(maxy - miny));
+                    double minDis = 2;
+                    var minNode = new KeyValuePair<ushort, SkillNode>();
+                    foreach (var node in tree.Skillnodes)
                     {
-                        minDis = dis;
-                        minNode = node;
+                        Vector2D nodePos = (node.Value.Position - new Vector2D(nminx, nminy))*
+                                           new Vector2D(1/(nmaxx - nminx), 1/(nmaxy - nminy));
+                        double dis = (nodePos - poezonePos).Length;
+                        if (dis < minDis)
+                        {
+                            minDis = dis;
+                            minNode = node;
+                        }
                     }
-                }
 
-                tree.SkilledNodes.Add(minNode.Key);
+                    tree.SkilledNodes.Add(minNode.Key);
+                }
             }
             tree.UpdateAvailNodes();
 
